@@ -24,9 +24,9 @@ type ValCurs struct {
         ID       string `xml:"ID,attr"`
         NumCode  string `xml:"NumCode"`
         CharCode string `xml:"CharCode"`
-        Nominal  string `xml:"Nominal"`
+        Nominal  int `xml:"Nominal"`
         Name     string `xml:"Name"`
-        Value    string `xml:"Value"`
+        Value    float32 `xml:"Value"`
     } `xml:"Valute"`
 } 
 
