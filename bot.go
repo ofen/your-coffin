@@ -104,7 +104,7 @@ func main() {
 
                 for _, valute := range valCurs.Valute {
                     if valute.CharCode == args {
-                        messageText = fmt.Sprintf("%s: %s", valute.CharCode, valute.Value)
+                        messageText = fmt.Sprintf("%s: %.2f", valute.CharCode, valute.Value)
                     }
                 }
 
