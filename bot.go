@@ -26,7 +26,7 @@ type ValCurs struct {
         CharCode string `xml:"CharCode"`
         Nominal  int `xml:"Nominal"`
         Name     string `xml:"Name"`
-        Value    float32 `xml:"Value"`
+        Value    string `xml:"Value"`
     } `xml:"Valute"`
 } 
 
@@ -104,7 +104,7 @@ func main() {
 
                 for _, valute := range valCurs.Valute {
                     if valute.CharCode == args {
-                        messageText = fmt.Sprintf("%s: %.2f", valute.CharCode, valute.Value)
+                        messageText = fmt.Sprintf("**%s:** %.2f", valute.CharCode, strings.Replace(valute.Value, ",", "."))
                     }
                 }
 
