@@ -56,7 +56,7 @@ func identReader(charset string, input io.Reader) (io.Reader, error) {
 func main() {
     bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
     if err != nil {
-        log.Panic(err)
+        log.Fatalln(err)
     }
 
     bot.Debug = true
