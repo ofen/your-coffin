@@ -105,7 +105,7 @@ func main() {
                         if err != nil {
                             log.Fatalln(err)
                         }
-                        report = append(report, fmt.Sprintf("**%s:**%.2f", valute.CharCode, valuteValue))
+                        report = append(report, fmt.Sprintf("*%s:*%.2f", valute.CharCode, valuteValue))
                     }
                     
                 }
