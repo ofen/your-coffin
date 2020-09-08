@@ -117,9 +117,9 @@ func main() {
                 }
 
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
+                msg.ParseMode = "markdown"
             default:
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Unsupported command: %q", update.Message.Command()))
-                msg.ParseMode = "markdown"
                 // msg.ReplyToMessageID = update.Message.MessageID
             }
 
