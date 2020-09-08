@@ -105,7 +105,7 @@ func main() {
                         if err != nil {
                             log.Fatalln(err)
                         }
-                        report = append(report, fmt.Sprintf("%s:%.2f", valute.CharCode, valuteValue))
+                        report = append(report, fmt.Sprintf("**%s:**%.2f", valute.CharCode, valuteValue))
                     }
                     
                 }
@@ -119,6 +119,7 @@ func main() {
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
             default:
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Unsupported command: %q", update.Message.Command()))
+                msg.ParseMode = "markdown"
                 // msg.ReplyToMessageID = update.Message.MessageID
             }
 
