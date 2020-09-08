@@ -7,6 +7,7 @@ import (
     "log"
     "net/http"
     "os"
+    "strconv"
     "strings"
     "time"
 
@@ -26,7 +27,7 @@ type ValCurs struct {
         CharCode string `xml:"CharCode"`
         Nominal  int `xml:"Nominal"`
         Name     string `xml:"Name"`
-        Value    float32 `xml:"Value"`
+        Value    string `xml:"Value"`
     } `xml:"Valute"`
 } 
 
@@ -93,20 +94,23 @@ func main() {
                 if err != nil {
                     log.Fatalln(err)
                 }
-
-                args := update.Message.CommandArguments()
-
-                if args == "" {
-                    args = "USD"
-                }
-
-                args = strings.ToUpper(args)
+                var report []string
 
                 for _, valute := range valCurs.Valute {
-                    if valute.CharCode == args {
-                        messageText = fmt.Sprintf("%s: %.2f", valute.CharCode, valute.Value)
+                    switch valute.CharCode {
+                    case
+                        "USD",
+                        "EUR":
+                        valuteValue, err := strconv.ParseFloat(strings.Replace(valute.Value, ",", ".", 1), 64)
+                        if err != nil {
+                            log.Fatalln(err)
+                        }
+                        report = append(report, fmt.Sprintf("%s:%.2f", valute.CharCode, valuteValue))
                     }
+                    
                 }
+
+                messageText = strings.Join(report, " ")
 
                 if messageText == "" {
                     messageText = "No exchange rate found"
