@@ -78,9 +78,8 @@ func main() {
             switch update.Message.Command() {
             case "status":
                 var messageText string
-                releaseCreated := os.Getenv("HEROKU_RELEASE_CREATED_AT")
-                releaseHash := os.Getenv("HEROKU_SLUG_COMMIT")
-                messageText = fmt.Sprintf("%s %s", releaseCreated, releaseHash)
+                commitSHA := os.Getenv("SOURCE_VERSION")
+                messageText = fmt.Sprintf("%s", commitSHA)
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
             case "currency":
                 var valCurs ValCurs
