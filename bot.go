@@ -54,7 +54,7 @@ func identReader(charset string, input io.Reader) (io.Reader, error) {
 }
 
 func main() {
-    startTime := time.Now()
+    startTime := time.Now().Format("2012-11-01T22:08:41+00:00")
     bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
     if err != nil {
         log.Fatalln(err)
