@@ -110,7 +110,7 @@ func main() {
                     
                 }
 
-                messageText = strings.Join(report, " ")
+                messageText = strings.Join(report, "\n")
 
                 if messageText == "" {
                     messageText = "No exchange rate found"
