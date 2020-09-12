@@ -54,6 +54,7 @@ func identReader(charset string, input io.Reader) (io.Reader, error) {
 }
 
 func main() {
+    startTime := time.Now()
     bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
     if err != nil {
         log.Fatalln(err)
@@ -78,8 +79,7 @@ func main() {
             switch update.Message.Command() {
             case "status":
                 var messageText string
-                commitSHA := os.Getenv("SOURCE_VERSION")
-                messageText = fmt.Sprintf("%s", commitSHA)
+                messageText = fmt.Sprintf("ok, start time is %s", startTime)
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
             case "currency":
                 var valCurs ValCurs
