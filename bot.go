@@ -79,7 +79,7 @@ func main() {
             switch update.Message.Command() {
             case "status":
                 var messageText string
-                messageText = fmt.Sprintf("ok, start time is %s", startTime)
+                messageText = fmt.Sprintf("ok")
                 msg = tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
             case "currency":
                 var valCurs ValCurs
