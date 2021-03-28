@@ -37,6 +37,7 @@ func checkUser(fn func(bot *tgbotapi.BotAPI, update tgbotapi.Update)) func(bot *
 		for _, id := range allowedUsers {
 			if id == update.Message.Chat.ID {
 				fn(bot, update)
+				return
 			}
 		}
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("user not allowed: %v", update.Message.Chat.ID))
