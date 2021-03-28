@@ -114,7 +114,7 @@ func handleCurrencyCommand(update tgbotapi.Update) {
 		return
 	}
 
-	var report []string
+	report := []string{}
 
 	for _, valute := range v.Valute {
 		switch strings.ToLower(valute.CharCode) {
@@ -141,12 +141,14 @@ func handleCurrencyCommand(update tgbotapi.Update) {
 
 func main() {
 	allowedUsers = getAllowedUsers(os.Getenv("ALLOWED_USERS"))
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
+	b, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
 	if err != nil {
 		log.Fatal("unable to connect")
 	}
 
+	bot = b
 	bot.Debug = true
+
 	log.Printf("authorized account: %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
