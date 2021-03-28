@@ -28,6 +28,19 @@ func handleWhoamiCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	bot.Send(msg)
 }
 
+func newXMLDecoder(r io.Reader) *xml.Decoder {
+	d := xml.NewDecoder(r)
+
+	d.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		if charset == "windows-1251" {
+			return charmap.Windows1251.NewDecoder().Reader(input), nil
+		}
+		return nil, fmt.Errorf("unknown charset: %s", charset)
+	}
+
+	return d
+}
+
 func handleStatusCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("ok"))
 	bot.Send(msg)
@@ -45,8 +58,6 @@ func handleError(bot *tgbotapi.BotAPI, update tgbotapi.Update, err error) {
 }
 
 func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
-	var v valCurs
-
 	resp, err := http.Get("http://www.cbr.ru/scripts/XML_daily.asp")
 	if err != nil {
 		handleError(bot, update, err)
@@ -54,7 +65,8 @@ func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	}
 	defer resp.Body.Close()
 
-	if err = xml.NewDecoder(resp.Body).Decode(&v); err != nil {
+	v := &valCurs{}
+	if err = newXMLDecoder(resp.Body).Decode(&v); err != nil {
 		handleError(bot, update, err)
 		return
 	}
