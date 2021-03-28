@@ -38,26 +38,32 @@ func handleDefaultCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	bot.Send(msg)
 }
 
+func handleError(bot *tgbotapi.BotAPI, update tgbotapi.Update, err error) {
+	log.Println(err)
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, err.Error())
+	bot.Send(msg)
+}
+
 func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	var v valCurs
 
 	resp, err := http.Get("http://www.cbr.ru/scripts/XML_daily.asp")
 	if err != nil {
-		log.Fatalln(err)
+		handleError(bot, update, err)
+		return
 	}
 	defer resp.Body.Close()
 
 	if err = xml.NewDecoder(resp.Body).Decode(&v); err != nil {
-		log.Println(err)
+		handleError(bot, update, err)
+		return
 	}
 
 	var report []string
 
 	for _, valute := range v.Valute {
-		switch valute.CharCode {
-		case
-			"USD",
-			"EUR":
+		switch strings.ToLower(valute.CharCode) {
+		case "usd", "eur":
 			valuteValue, err := strconv.ParseFloat(strings.Replace(valute.Value, ",", ".", 1), 64)
 			if err != nil {
 				log.Fatalln(err)
@@ -67,13 +73,13 @@ func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 
 	}
 
-	messageText := strings.Join(report, "\n")
+	text := strings.Join(report, "\n")
 
-	if messageText == "" {
-		messageText = "No exchange rate found"
+	if text == "" {
+		text = "No exchange rate found"
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	msg.ParseMode = "markdown"
 	bot.Send(msg)
 }
