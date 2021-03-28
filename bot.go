@@ -23,7 +23,7 @@ func getAllowedUsers() []int64 {
 
 	users := strings.Split(os.Getenv("ALLOWED_USERS"), ",")
 	for _, u := range users {
-		id, err := strconv.ParseInt(u, 10, 64)
+		id, err := strconv.ParseInt(strings.TrimSpace(u), 10, 64)
 		if err == nil {
 			allowedUsers = append(allowedUsers, id)
 		}
