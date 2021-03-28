@@ -14,11 +14,35 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func identReader(charset string, input io.Reader) (io.Reader, error) {
-	if charset == "windows-1251" {
-		return charmap.Windows1251.NewDecoder().Reader(input), nil
+var (
+	allowedUsers []int64
+)
+
+func getAllowedUsers() []int64 {
+	allowedUsers := []int64{}
+
+	users := strings.Split(os.Getenv("ALLOWED_USERS"), ",")
+	for _, u := range users {
+		id, err := strconv.ParseInt(u, 10, 64)
+		if err == nil {
+			allowedUsers = append(allowedUsers, id)
+		}
 	}
-	return nil, fmt.Errorf("unknown charset: %s", charset)
+
+	return allowedUsers
+}
+
+func checkUser(fn func(bot *tgbotapi.BotAPI, update tgbotapi.Update)) func(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	return func(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+		for _, id := range allowedUsers {
+			if id == update.Message.Chat.ID {
+				fn(bot, update)
+			}
+		}
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("user not allowed: %v", update.Message.Chat.ID))
+		bot.Send(msg)
+		return
+	}
 }
 
 func handleWhoamiCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
@@ -97,6 +121,7 @@ func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 }
 
 func main() {
+	allowedUsers = getAllowedUsers()
 	token := os.Getenv("BOT_TOKEN")
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
@@ -120,9 +145,9 @@ func main() {
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "status":
-				handleStatusCommand(bot, update)
+				checkUser(handleStatusCommand)(bot, update)
 			case "currency":
-				handleCurrencyCommand(bot, update)
+				checkUser(handleCurrencyCommand)(bot, update)
 			case "whoami":
 				handleWhoamiCommand(bot, update)
 			default:
