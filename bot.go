@@ -16,12 +16,13 @@ import (
 
 var (
 	allowedUsers []int64
+	bot          *tgbotapi.BotAPI
 )
 
-func getAllowedUsers() []int64 {
+func getAllowedUsers(usersList string) []int64 {
 	allowedUsers := []int64{}
 
-	users := strings.Split(os.Getenv("ALLOWED_USERS"), ",")
+	users := strings.Split(usersList, ",")
 	for _, u := range users {
 		id, err := strconv.ParseInt(strings.TrimSpace(u), 10, 64)
 		if err == nil {
@@ -32,21 +33,28 @@ func getAllowedUsers() []int64 {
 	return allowedUsers
 }
 
-func checkUser(fn func(bot *tgbotapi.BotAPI, update tgbotapi.Update)) func(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
-	return func(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+func checkUser(fn func(update tgbotapi.Update)) func(update tgbotapi.Update) {
+	return func(update tgbotapi.Update) {
+
+		if len(allowedUsers) == 0 {
+			fn(update)
+			return
+		}
+
 		for _, id := range allowedUsers {
 			if id == update.Message.Chat.ID {
-				fn(bot, update)
+				fn(update)
 				return
 			}
 		}
+
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("user not allowed: %v", update.Message.Chat.ID))
 		bot.Send(msg)
 		return
 	}
 }
 
-func handleWhoamiCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+func handleWhoamiCommand(update tgbotapi.Update) {
 	text := fmt.Sprintf("*id:* %v\n*name:* %s %s", update.Message.Chat.ID, update.Message.Chat.FirstName, update.Message.Chat.LastName)
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	msg.ParseMode = "markdown"
@@ -66,33 +74,43 @@ func newXMLDecoder(r io.Reader) *xml.Decoder {
 	return d
 }
 
-func handleStatusCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("ok"))
+func handleStatusCommand(update tgbotapi.Update) {
+	text := ""
+	version := os.Getenv("SOURCE_VERSION")
+
+	switch {
+	case version != "":
+		text = fmt.Sprintf("version: %s", version)
+	default:
+		text = "ok"
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	bot.Send(msg)
 }
 
-func handleDefaultCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+func handleUnsupportedCommand(update tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Unsupported command: %q", update.Message.Command()))
 	bot.Send(msg)
 }
 
-func handleError(bot *tgbotapi.BotAPI, update tgbotapi.Update, err error) {
+func handleError(update tgbotapi.Update, err error) {
 	log.Println(err)
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, err.Error())
 	bot.Send(msg)
 }
 
-func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+func handleCurrencyCommand(update tgbotapi.Update) {
 	resp, err := http.Get("http://www.cbr.ru/scripts/XML_daily.asp")
 	if err != nil {
-		handleError(bot, update, err)
+		handleError(update, err)
 		return
 	}
 	defer resp.Body.Close()
 
 	v := &valCurs{}
 	if err = newXMLDecoder(resp.Body).Decode(&v); err != nil {
-		handleError(bot, update, err)
+		handleError(update, err)
 		return
 	}
 
@@ -122,21 +140,22 @@ func handleCurrencyCommand(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 }
 
 func main() {
-	allowedUsers = getAllowedUsers()
-	token := os.Getenv("BOT_TOKEN")
-	bot, err := tgbotapi.NewBotAPI(token)
+	allowedUsers = getAllowedUsers(os.Getenv("ALLOWED_USERS"))
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
 	if err != nil {
 		log.Fatal("unable to connect")
 	}
 
 	bot.Debug = true
-
 	log.Printf("authorized account: %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
 	updates, err := bot.GetUpdatesChan(u)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	for update := range updates {
 		if update.Message == nil {
@@ -146,13 +165,13 @@ func main() {
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "status":
-				checkUser(handleStatusCommand)(bot, update)
+				checkUser(handleStatusCommand)(update)
 			case "currency":
-				checkUser(handleCurrencyCommand)(bot, update)
+				checkUser(handleCurrencyCommand)(update)
 			case "whoami":
-				handleWhoamiCommand(bot, update)
+				handleWhoamiCommand(update)
 			default:
-				handleDefaultCommand(bot, update)
+				handleUnsupportedCommand(update)
 			}
 
 			// log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
