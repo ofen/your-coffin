@@ -91,13 +91,21 @@ func handleStatusCommand(update tgbotapi.Update) {
 
 func handleMetersCommand(update tgbotapi.Update) {
 	date := update.Message.Time().Format("02-01-2006")
-	args := strings.Split(update.Message.CommandArguments(), " ")
+	args := []int{}
+
+	for _, arg := range strings.Split(update.Message.CommandArguments(), " ") {
+		int, err := strconv.Atoi(arg)
+		if err == nil {
+			args = append(args, int)
+		}
+	}
 
 	if len(args) != 4 {
 		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "incorrect arguments"))
 		return
 	}
-	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("sheet updated %s\nhot vater: %s\ncold vater: %s\nelectricity1: %s\nelectricity2: %s", date, args[0], args[1], args[2], args[3])))
+
+	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("sheet updated %s\nhot vater: %v\ncold vater: %v\nelectricity1: %v\nelectricity2: %v", date, args[0], args[1], args[2], args[3])))
 }
 
 func handleUnsupportedCommand(update tgbotapi.Update) {
