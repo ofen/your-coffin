@@ -89,6 +89,17 @@ func handleStatusCommand(update tgbotapi.Update) {
 	bot.Send(msg)
 }
 
+func handleMetersCommand(update tgbotapi.Update) {
+	date := update.Message.Time().Format("02-01-2006")
+	args := strings.Split(update.Message.CommandArguments(), " ")
+
+	if len(args) != 4 {
+		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "incorrect arguments"))
+		return
+	}
+	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("sheet updated %s\nhot vater: %s\ncold vater: %s\nelectricity1: %s\nelectricity2: %s", date, args[0], args[1], args[2], args[3])))
+}
+
 func handleUnsupportedCommand(update tgbotapi.Update) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Unsupported command: %q", update.Message.Command()))
 	bot.Send(msg)
@@ -170,6 +181,8 @@ func main() {
 				checkUser(handleStatusCommand)(update)
 			case "currency":
 				checkUser(handleCurrencyCommand)(update)
+			case "meters":
+				checkUser(handleMetersCommand)(update)
 			case "whoami":
 				handleWhoamiCommand(update)
 			default:
