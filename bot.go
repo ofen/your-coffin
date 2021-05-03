@@ -106,10 +106,7 @@ func handleMetersCommand(update tgbotapi.Update) {
 		return
 	}
 
-	values := []interface{}{}
-	values = append(values, args)
-
-	sheet.appendRow(values)
+	sheet.appendRow([]interface{}{date, args[0], args[1], args[2], args[3]})
 
 	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprint("sheet updated")))
 }
