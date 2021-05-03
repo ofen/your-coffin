@@ -17,6 +17,7 @@ import (
 var (
 	allowedUsers []int64
 	bot          *tgbotapi.BotAPI
+	sheet        *spreadsheet
 )
 
 func getAllowedUsers(usersList string) []int64 {
@@ -105,7 +106,12 @@ func handleMetersCommand(update tgbotapi.Update) {
 		return
 	}
 
-	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("sheet updated %s\nhot vater: %v\ncold vater: %v\nelectricity1: %v\nelectricity2: %v", date, args[0], args[1], args[2], args[3])))
+	values := []interface{}{}
+	values = append(values, args)
+
+	sheet.appendRow(values)
+
+	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprint("sheet updated")))
 }
 
 func handleUnsupportedCommand(update tgbotapi.Update) {
@@ -159,6 +165,10 @@ func handleCurrencyCommand(update tgbotapi.Update) {
 }
 
 func main() {
+	s, err := newSpreadsheet(os.Getenv("GOOGLE_SPREADSHEET"))
+	if err == nil {
+		sheet = s
+	}
 	allowedUsers = getAllowedUsers(os.Getenv("ALLOWED_USERS"))
 	b, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
 	if err != nil {
