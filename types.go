@@ -47,7 +47,7 @@ func (m *meters) setElectricityT2(value int) {
 }
 
 type user struct {
-	Username string `json:"username"`
+	ID int64 `json:"id"`
 }
 
 type handlerFunc func(context.Context, *tgbotapi.Message)

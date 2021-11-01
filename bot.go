@@ -77,7 +77,7 @@ func isAllowed(message *tgbotapi.Message) bool {
 	users := getAllowedUsers()
 
 	for _, user := range users {
-		if user.Username == message.Chat.UserName {
+		if user.ID == message.Chat.ID {
 			return true
 		}
 	}
