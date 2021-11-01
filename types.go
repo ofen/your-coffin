@@ -46,7 +46,7 @@ func (m *meters) setElectricityT2(value int) {
 	m.electricityT2 = value
 }
 
-type allowedUsers []struct {
+type user struct {
 	Username string `json:"username"`
 }
 

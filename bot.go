@@ -65,8 +65,8 @@ func (b *bot) getNextStepHandler(message *tgbotapi.Message) handlerFunc {
 	return nil
 }
 
-func getAllowedUsers() allowedUsers {
-	users := allowedUsers{}
+func getAllowedUsers() []user {
+	users := []user{}
 	date := []byte(os.Getenv("ALLOWED_USERS"))
 	json.Unmarshal(date, &users)
 
@@ -75,10 +75,6 @@ func getAllowedUsers() allowedUsers {
 
 func isAllowed(message *tgbotapi.Message) bool {
 	users := getAllowedUsers()
-
-	if len(users) == 0 {
-		return true
-	}
 
 	for _, user := range users {
 		if user.Username == message.Chat.UserName {
