@@ -12,8 +12,8 @@ import (
 )
 
 func createTempCredentials() error {
-	content := os.Getenv("GOOGLE_CREDENTIALS")
-	if content == "" {
+	content, ok := os.LookupEnv("GOOGLE_CREDENTIALS")
+	if !ok {
 		return nil
 	}
 
@@ -66,13 +66,12 @@ type spreadsheet struct {
 }
 
 func (s *spreadsheet) appendRow(values []interface{}) error {
-	valuerange := &sheets.ValueRange{}
-	valuerange.Values = append(valuerange.Values, values)
-	_, err := s.svc.Spreadsheets.Values.Append(s.spreadsheetID, s.sheetName, valuerange).ValueInputOption("USER_ENTERED").Do()
-
+	vr := &sheets.ValueRange{Values: [][]interface{}{values}}
+	_, err := s.svc.Spreadsheets.Values.Append(s.spreadsheetID, s.sheetName, vr).ValueInputOption("RAW").Do()
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

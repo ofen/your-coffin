@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -10,56 +12,88 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"golang.org/x/text/encoding/charmap"
 )
 
-var (
-	allowedUsers []int64
-	bot          *tgbotapi.BotAPI
-	sheet        *spreadsheet
+const (
+	curencyEndpoint  string     = "http://www.cbr.ru/scripts/XML_daily.asp"
+	metersDateFormat string     = "02.01.2006"
+	metersContextKey contextKey = "meters"
 )
 
-func getAllowedUsers(usersList string) []int64 {
-	allowedUsers := []int64{}
+var contextKeys = []contextKey{metersContextKey}
 
-	users := strings.Split(usersList, ",")
-	for _, u := range users {
-		id, err := strconv.ParseInt(strings.TrimSpace(u), 10, 64)
-		if err == nil {
-			allowedUsers = append(allowedUsers, id)
-		}
+func newBot(token string) bot {
+	api, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
+	if err != nil {
+		log.Fatal("unable to connect")
 	}
 
-	return allowedUsers
-}
+	if os.Getenv("DEBUG") == "true" {
+		api.Debug = true
+	}
 
-func checkUser(fn func(update tgbotapi.Update)) func(update tgbotapi.Update) {
-	return func(update tgbotapi.Update) {
-
-		if len(allowedUsers) == 0 {
-			fn(update)
-			return
-		}
-
-		for _, id := range allowedUsers {
-			if id == update.Message.Chat.ID {
-				fn(update)
-				return
-			}
-		}
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("user not allowed: %v", update.Message.Chat.ID))
-		bot.Send(msg)
-		return
+	return bot{
+		api,
+		make(map[int64]handlerFunc),
 	}
 }
 
-func handleWhoamiCommand(update tgbotapi.Update) {
-	text := fmt.Sprintf("*id:* %v\n*name:* %s %s", update.Message.Chat.ID, update.Message.Chat.FirstName, update.Message.Chat.LastName)
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+type bot struct {
+	*tgbotapi.BotAPI
+	nextHandler map[int64]handlerFunc
+}
+
+func (b *bot) registerNextStepHandler(ctx context.Context, message *tgbotapi.Message, f handlerFunc) {
+	b.nextHandler[message.Chat.ID] = func(c context.Context, m *tgbotapi.Message) {
+		// copy context
+		for _, k := range contextKeys {
+			v := ctx.Value(k)
+			c = context.WithValue(c, k, v)
+		}
+		f(c, m)
+	}
+}
+
+func (b *bot) getNextStepHandler(message *tgbotapi.Message) handlerFunc {
+	f, ok := b.nextHandler[message.Chat.ID]
+	if ok {
+		delete(b.nextHandler, message.Chat.ID)
+		return f
+	}
+	return nil
+}
+
+func getAllowedUsers() allowedUsers {
+	users := allowedUsers{}
+	date := []byte(os.Getenv("ALLOWED_USERS"))
+	json.Unmarshal(date, &users)
+
+	return users
+}
+
+func isAllowed(message *tgbotapi.Message) bool {
+	users := getAllowedUsers()
+
+	if len(users) == 0 {
+		return true
+	}
+
+	for _, user := range users {
+		if user.Username == message.Chat.UserName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (b *bot) whoAmIHandler(ctx context.Context, message *tgbotapi.Message) {
+	text := fmt.Sprintf("*id:* %v\n*name:* %s %s", message.Chat.ID, message.Chat.FirstName, message.Chat.LastName)
+	msg := tgbotapi.NewMessage(message.Chat.ID, text)
 	msg.ParseMode = "markdown"
-	bot.Send(msg)
+	b.Send(msg)
 }
 
 func newXMLDecoder(r io.Reader) *xml.Decoder {
@@ -75,7 +109,7 @@ func newXMLDecoder(r io.Reader) *xml.Decoder {
 	return d
 }
 
-func handleStatusCommand(update tgbotapi.Update) {
+func (b *bot) statusHandler(ctx context.Context, message *tgbotapi.Message) {
 	text := ""
 	version := os.Getenv("SOURCE_VERSION")
 
@@ -86,53 +120,100 @@ func handleStatusCommand(update tgbotapi.Update) {
 		text = "ok"
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
-	bot.Send(msg)
+	msg := tgbotapi.NewMessage(message.Chat.ID, text)
+	b.Send(msg)
 }
 
-func handleMetersCommand(update tgbotapi.Update) {
-	date := update.Message.Time().Format("02-01-2006")
-	args := []int{}
+func (b *bot) metersHandler(ctx context.Context, message *tgbotapi.Message) {
+	b.Send(tgbotapi.NewMessage(message.Chat.ID, "enter hot water or use /cancel to stop"))
+	ctx = context.WithValue(ctx, metersContextKey, &meters{-1, -1, -1, -1})
+	b.registerNextStepHandler(ctx, message, b.handleMeters)
+}
 
-	for _, arg := range strings.Split(update.Message.CommandArguments(), " ") {
-		int, err := strconv.Atoi(arg)
-		if err == nil {
-			args = append(args, int)
-		}
+func (b *bot) handleMeters(ctx context.Context, message *tgbotapi.Message) {
+	if message.Text == "/cancel" {
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, "canceled"))
+		return
 	}
-
-	if len(args) != 4 {
-		bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "incorrect arguments"))
+	v, err := strconv.Atoi(message.Text)
+	if err != nil || v < 0 {
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, "value should be positive number"))
+		b.registerNextStepHandler(ctx, message, b.handleMeters)
 		return
 	}
 
-	sheet.appendRow([]interface{}{date, args[0], args[1], args[2], args[3]})
+	m := ctx.Value(metersContextKey).(*meters)
 
-	bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprint("sheet updated")))
-}
+	switch {
+	case m.hotWater < 0:
+		m.setHotWater(v)
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, "enter cold water"))
+		b.registerNextStepHandler(ctx, message, b.handleMeters)
+		return
+	case m.coldWater < 0:
+		m.setColdWater(v)
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, "enter electricity (t1)"))
+		b.registerNextStepHandler(ctx, message, b.handleMeters)
+		return
+	case m.electricityT1 < 0:
+		m.setElectricityT1(v)
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, "enter electricity (t2)"))
+		b.registerNextStepHandler(ctx, message, b.handleMeters)
+		return
+	case m.electricityT2 < 0:
+		m.setElectricityT2(v)
+		text := fmt.Sprintf("\n*hot water:* %v", m.hotWater)
+		text += fmt.Sprintf("\n*cold water:* %v", m.coldWater)
+		text += fmt.Sprintf("\n*electricity (t1):* %v", m.electricityT1)
+		text += fmt.Sprintf("\n*electricity (t2):* %v", m.electricityT2)
+		msg := tgbotapi.NewMessage(message.Chat.ID, text)
+		msg.ParseMode = tgbotapi.ModeMarkdown
+		b.Send(msg)
+	}
 
-func handleUnsupportedCommand(update tgbotapi.Update) {
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Unsupported command: %q", update.Message.Command()))
-	bot.Send(msg)
-}
-
-func handleError(update tgbotapi.Update, err error) {
-	log.Println(err)
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, err.Error())
-	bot.Send(msg)
-}
-
-func handleCurrencyCommand(update tgbotapi.Update) {
-	resp, err := http.Get("http://www.cbr.ru/scripts/XML_daily.asp")
+	s, err := newSpreadsheet(os.Getenv("GOOGLE_SPREADSHEET"))
 	if err != nil {
-		handleError(update, err)
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, err.Error()))
+		return
+	}
+
+	today := message.Time().Format(metersDateFormat)
+	err = s.appendRow([]interface{}{
+		today,
+		m.hotWater,
+		m.coldWater,
+		m.electricityT1,
+		m.electricityT2,
+	})
+	if err != nil {
+		b.Send(tgbotapi.NewMessage(message.Chat.ID, err.Error()))
+		return
+	}
+	b.Send(tgbotapi.NewMessage(message.Chat.ID, "sheet updated"))
+}
+
+func (b *bot) unsupportedHandler(ctx context.Context, message *tgbotapi.Message) {
+	msg := tgbotapi.NewMessage(message.Chat.ID, fmt.Sprintf("unsupported command: %q", message.Command()))
+	b.Send(msg)
+}
+
+func (b *bot) handleError(message *tgbotapi.Message, err error) {
+	log.Println(err)
+	msg := tgbotapi.NewMessage(message.Chat.ID, err.Error())
+	b.Send(msg)
+}
+
+func (b *bot) currencyHandler(ctx context.Context, message *tgbotapi.Message) {
+	resp, err := http.Get(curencyEndpoint)
+	if err != nil {
+		b.handleError(message, err)
 		return
 	}
 	defer resp.Body.Close()
 
 	v := &valCurs{}
 	if err = newXMLDecoder(resp.Body).Decode(&v); err != nil {
-		handleError(update, err)
+		b.handleError(message, err)
 		return
 	}
 
@@ -156,56 +237,65 @@ func handleCurrencyCommand(update tgbotapi.Update) {
 		text = "No exchange rate found"
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+	msg := tgbotapi.NewMessage(message.Chat.ID, text)
 	msg.ParseMode = "markdown"
-	bot.Send(msg)
+	b.Send(msg)
 }
 
 func main() {
-	s, err := newSpreadsheet(os.Getenv("GOOGLE_SPREADSHEET"))
-	if err == nil {
-		sheet = s
-	}
-	allowedUsers = getAllowedUsers(os.Getenv("ALLOWED_USERS"))
-	b, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
-	if err != nil {
-		log.Fatal("unable to connect")
-	}
-
-	bot = b
-	bot.Debug = true
-
-	log.Printf("authorized account: %s", bot.Self.UserName)
+	b := newBot(os.Getenv("BOT_TOKEN"))
+	log.Printf("authorized account: %s", b.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates, err := bot.GetUpdatesChan(u)
+	updates, err := b.GetUpdatesChan(u)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for update := range updates {
-		if update.Message == nil {
+		message := update.Message
+		ctx := context.TODO()
+
+		if message == nil {
 			continue
 		}
 
-		if update.Message.IsCommand() {
+		if handler := b.getNextStepHandler(message); handler != nil {
+			handler(ctx, message)
+			continue
+		}
+
+		if !message.IsCommand() {
+			continue
+		}
+
+		switch isAllowed(message) {
+		case true:
 			switch update.Message.Command() {
 			case "status":
-				checkUser(handleStatusCommand)(update)
+				b.statusHandler(ctx, message)
 			case "currency":
-				checkUser(handleCurrencyCommand)(update)
+				b.currencyHandler(ctx, message)
 			case "meters":
-				checkUser(handleMetersCommand)(update)
+				// checkUser(handleMetersCommand)(message)
+				b.metersHandler(ctx, message)
 			case "whoami":
-				handleWhoamiCommand(update)
+				b.whoAmIHandler(ctx, message)
 			default:
-				handleUnsupportedCommand(update)
+				b.unsupportedHandler(ctx, message)
 			}
-
-			// log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+		case false:
+			switch message.Command() {
+			case "whoami":
+				b.whoAmIHandler(ctx, message)
+			default:
+				b.unsupportedHandler(ctx, message)
+			}
 		}
+
+		// log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
 	}
 }
