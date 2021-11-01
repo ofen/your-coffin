@@ -127,7 +127,7 @@ func (b *bot) metersHandler(ctx context.Context, message *tgbotapi.Message) {
 }
 
 func (b *bot) handleMeters(ctx context.Context, message *tgbotapi.Message) {
-	if message.Text == "/cancel" {
+	if message.IsCommand() && message.Command() == "cancel" {
 		b.Send(tgbotapi.NewMessage(message.Chat.ID, "canceled"))
 		return
 	}
