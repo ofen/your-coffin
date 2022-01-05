@@ -1,1 +1,1 @@
-worker: bin/yourcoffin
+web: bin/yourcoffin

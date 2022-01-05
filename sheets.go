@@ -47,7 +47,7 @@ func newSpreadsheet(sheet string) (*spreadsheet, error) {
 		return nil, err
 	}
 
-	svc, err := sheets.NewService(context.TODO(), option.WithScopes(sheets.SpreadsheetsScope))
+	svc, err := sheets.NewService(context.Background(), option.WithScopes(sheets.SpreadsheetsScope))
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +75,19 @@ func (s *spreadsheet) appendRow(values []interface{}) error {
 	return nil
 }
 
-func (s *spreadsheet) get() (*sheets.ValueRange, error) {
+func (s *spreadsheet) rows() (*sheets.ValueRange, error) {
 	return s.svc.Spreadsheets.Values.Get(s.spreadsheetID, s.sheetName).Do()
+}
+
+func (s *spreadsheet) lastRow() ([]interface{}, error) {
+	values, err := s.rows()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(values.Values) < 1 {
+		return []interface{}{}, nil
+	}
+
+	return values.Values[len(values.Values)-1], nil
 }

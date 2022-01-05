@@ -1,10 +1,9 @@
 package main
 
 import (
-	"context"
 	"encoding/xml"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type valCurs struct {
@@ -30,27 +29,11 @@ type meters struct {
 	electricityT2 int
 }
 
-func (m *meters) setHotWater(value int) {
-	m.hotWater = value
-}
-
-func (m *meters) setColdWater(value int) {
-	m.coldWater = value
-}
-
-func (m *meters) setElectricityT1(value int) {
-	m.electricityT1 = value
-}
-
-func (m *meters) setElectricityT2(value int) {
-	m.electricityT2 = value
-}
-
 type user struct {
 	ID int64 `json:"id"`
 }
 
-type handlerFunc func(context.Context, *tgbotapi.Message)
+type handlerFunc func(*tg.Message)
 
 type contextKey string
 
