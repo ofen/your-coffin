@@ -9,8 +9,8 @@ Telegram bot for own needs.
 ## Supported commands
 - status - check bot status
 - currency - chech current exchange rate
-- meters - set meters
-- lastmeters - show last meters
+- meters - set electricity/water meters
+- lastmeters - show last electricity/water meters
 - whoami - show info about requesting user
 
 ## Build
