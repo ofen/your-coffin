@@ -1,4 +1,4 @@
-Telegram bot for own needs.
+Telegram bot for personal needs.
 
 ## Required environment variables
 - ALLOWED_USERS - list of allowed users in json format (example: `[{"id": 123456789}]`)
