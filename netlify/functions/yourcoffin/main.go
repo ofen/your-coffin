@@ -57,6 +57,13 @@ func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
 }
 
 func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+	if req.HTTPMethod != http.MethodPost {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       "Hello there!",
+		}, nil
+	}
+
 	data := &bot.Data{}
 	if err := json.Unmarshal([]byte(req.Body), data); err != nil {
 		return &events.APIGatewayProxyResponse{
