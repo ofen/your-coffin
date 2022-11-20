@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -29,6 +30,7 @@ func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken),
 		bytes.NewReader(data))
 	if err != nil {
+		log.Println(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusServiceUnavailable,
 			Body:       err.Error(),
@@ -37,6 +39,7 @@ func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		log.Println(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusServiceUnavailable,
 			Body:       err.Error(),
