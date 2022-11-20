@@ -4,6 +4,7 @@ module github.com/ofen/yourcoffin
 go 1.17
 
 require (
+	github.com/aws/aws-lambda-go v1.35.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	golang.org/x/text v0.3.7
 	google.golang.org/api v0.63.0

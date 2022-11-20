@@ -1,4 +1,4 @@
-package main
+package bot
 
 import (
 	"context"
@@ -23,13 +23,13 @@ func getMeters(ctx context.Context) (meters, bool) {
 	return v, ok
 }
 
-func (b *bot) handleError(message *tg.Message, err error) {
+func (b *Bot) handleError(message *tg.Message, err error) {
 	log.Println(err)
 	msg := tg.NewMessage(message.Chat.ID, err.Error())
 	b.Send(msg)
 }
 
-func (b *bot) updateMeters(message *tg.Message, m meters) {
+func (b *Bot) updateMeters(message *tg.Message, m meters) {
 	s, err := newSpreadsheet(os.Getenv("GOOGLE_SPREADSHEET"))
 	if err != nil {
 		b.handleError(message, err)
@@ -83,13 +83,13 @@ func (b *bot) updateMeters(message *tg.Message, m meters) {
 	b.Send(msg)
 }
 
-func (b *bot) whoAmIHandler(message *tg.Message) {
+func (b *Bot) WhoAmIHandler(message *tg.Message) {
 	text := fmt.Sprintf("*id:* %v\n*name:* %s %s", message.Chat.ID, message.Chat.FirstName, message.Chat.LastName)
 	msg := tg.NewMessage(message.Chat.ID, text)
 	msg.ParseMode = tg.ModeMarkdown
 	b.Send(msg)
 }
-func (b *bot) statusHandler(message *tg.Message) {
+func (b *Bot) StatusHandler(message *tg.Message) {
 	text := ""
 	version := os.Getenv("SOURCE_VERSION")
 
@@ -103,12 +103,12 @@ func (b *bot) statusHandler(message *tg.Message) {
 	msg := tg.NewMessage(message.Chat.ID, text)
 	b.Send(msg)
 }
-func (b *bot) metersHandler(message *tg.Message) {
+func (b *Bot) MetersHandler(message *tg.Message) {
 	b.Send(tg.NewMessage(message.Chat.ID, "enter hot water or use /cancel to stop"))
-	b.registerNextStepHandler(message, b.handleHotWater(meters{-1, -1, -1, -1}))
+	b.RegisterNextStepHandler(message, b.handleHotWater(meters{-1, -1, -1, -1}))
 }
 
-func (b *bot) handleHotWater(m meters) handlerFunc {
+func (b *Bot) handleHotWater(m meters) handlerFunc {
 	return func(message *tg.Message) {
 		if message.IsCommand() && message.Command() == "cancel" {
 			b.Send(tg.NewMessage(message.Chat.ID, "canceled"))
@@ -117,17 +117,17 @@ func (b *bot) handleHotWater(m meters) handlerFunc {
 		v, err := strconv.Atoi(message.Text)
 		if err != nil || v < 0 {
 			b.handleError(message, fmt.Errorf("value should be positive number"))
-			b.registerNextStepHandler(message, b.handleHotWater(m))
+			b.RegisterNextStepHandler(message, b.handleHotWater(m))
 			return
 		}
 
 		m.hotWater = v
 		b.Send(tg.NewMessage(message.Chat.ID, "enter cold water"))
-		b.registerNextStepHandler(message, b.handleColdWater(m))
+		b.RegisterNextStepHandler(message, b.handleColdWater(m))
 	}
 }
 
-func (b *bot) handleColdWater(m meters) handlerFunc {
+func (b *Bot) handleColdWater(m meters) handlerFunc {
 	return func(message *tg.Message) {
 		if message.IsCommand() && message.Command() == "cancel" {
 			b.Send(tg.NewMessage(message.Chat.ID, "canceled"))
@@ -136,17 +136,17 @@ func (b *bot) handleColdWater(m meters) handlerFunc {
 		v, err := strconv.Atoi(message.Text)
 		if err != nil || v < 0 {
 			b.handleError(message, fmt.Errorf("value should be positive number"))
-			b.registerNextStepHandler(message, b.handleColdWater(m))
+			b.RegisterNextStepHandler(message, b.handleColdWater(m))
 			return
 		}
 
 		m.coldWater = v
 		b.Send(tg.NewMessage(message.Chat.ID, "enter electricity (t1)"))
-		b.registerNextStepHandler(message, b.handleElectricityT1(m))
+		b.RegisterNextStepHandler(message, b.handleElectricityT1(m))
 	}
 }
 
-func (b *bot) handleElectricityT1(m meters) handlerFunc {
+func (b *Bot) handleElectricityT1(m meters) handlerFunc {
 	return func(message *tg.Message) {
 		if message.IsCommand() && message.Command() == "cancel" {
 			b.Send(tg.NewMessage(message.Chat.ID, "canceled"))
@@ -155,17 +155,17 @@ func (b *bot) handleElectricityT1(m meters) handlerFunc {
 		v, err := strconv.Atoi(message.Text)
 		if err != nil || v < 0 {
 			b.handleError(message, fmt.Errorf("value should be positive number"))
-			b.registerNextStepHandler(message, b.handleElectricityT1(m))
+			b.RegisterNextStepHandler(message, b.handleElectricityT1(m))
 			return
 		}
 
 		m.electricityT1 = v
 		b.Send(tg.NewMessage(message.Chat.ID, "enter electricity (t2)"))
-		b.registerNextStepHandler(message, b.handleElectricityT2(m))
+		b.RegisterNextStepHandler(message, b.handleElectricityT2(m))
 	}
 }
 
-func (b *bot) handleElectricityT2(m meters) handlerFunc {
+func (b *Bot) handleElectricityT2(m meters) handlerFunc {
 	return func(message *tg.Message) {
 		if message.IsCommand() && message.Command() == "cancel" {
 			b.Send(tg.NewMessage(message.Chat.ID, "canceled"))
@@ -174,7 +174,7 @@ func (b *bot) handleElectricityT2(m meters) handlerFunc {
 		v, err := strconv.Atoi(message.Text)
 		if err != nil || v < 0 {
 			b.handleError(message, fmt.Errorf("value should be positive number"))
-			b.registerNextStepHandler(message, b.handleElectricityT2(m))
+			b.RegisterNextStepHandler(message, b.handleElectricityT2(m))
 			return
 		}
 
@@ -184,7 +184,7 @@ func (b *bot) handleElectricityT2(m meters) handlerFunc {
 	}
 }
 
-func (b *bot) lastmetersHandler(message *tg.Message) {
+func (b *Bot) LastmetersHandler(message *tg.Message) {
 	s, err := newSpreadsheet(os.Getenv("GOOGLE_SPREADSHEET"))
 	if err != nil {
 		b.Send(tg.NewMessage(message.Chat.ID, err.Error()))
@@ -213,11 +213,11 @@ func (b *bot) lastmetersHandler(message *tg.Message) {
 	b.Send(msg)
 }
 
-func (b *bot) unsupportedHandler(message *tg.Message) {
+func (b *Bot) UnsupportedHandler(message *tg.Message) {
 	b.handleError(message, fmt.Errorf("unsupported command: %q", message.Command()))
 }
 
-func (b *bot) currencyHandler(message *tg.Message) {
+func (b *Bot) CurrencyHandler(message *tg.Message) {
 	resp, err := http.Get(curencyEndpoint)
 	if err != nil {
 		b.handleError(message, err)

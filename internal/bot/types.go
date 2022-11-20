@@ -1,10 +1,43 @@
-package main
+package bot
 
 import (
 	"encoding/xml"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+type Data struct {
+	UpdateID int     `json:"update_id"`
+	Message  Message `json:"message"`
+}
+
+type Response struct {
+	Text   string `json:"text"`
+	ChatID int    `json:"chat_id"`
+}
+
+type Message struct {
+	MessageID int    `json:"message_id"`
+	From      From   `json:"from"`
+	Chat      Chat   `json:"chat"`
+	Date      int    `json:"date"`
+	Text      string `json:"text"`
+}
+
+type Chat struct {
+	ID        int    `json:"id"`
+	FirstName string `json:"first_name"`
+	Username  string `json:"username"`
+	Type      string `json:"type"`
+}
+
+type From struct {
+	ID           int    `json:"id"`
+	IsBot        bool   `json:"is_bot"`
+	FirstName    string `json:"first_name"`
+	Username     string `json:"username"`
+	LanguageCode string `json:"language_code"`
+}
 
 type valCurs struct {
 	XMLName xml.Name `xml:"ValCurs"`
@@ -27,10 +60,6 @@ type meters struct {
 	coldWater     int
 	electricityT1 int
 	electricityT2 int
-}
-
-type user struct {
-	ID int64 `json:"id"`
 }
 
 type handlerFunc func(*tg.Message)
