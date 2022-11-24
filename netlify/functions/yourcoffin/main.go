@@ -118,7 +118,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.AP
 		}, nil
 	}
 
-	log.Panicln(lc)
+	log.Println(lc)
 
 	cc := lc.ClientContext
 
