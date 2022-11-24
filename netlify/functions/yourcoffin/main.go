@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -32,6 +33,10 @@ type Message struct {
 	Chat      Chat   `json:"chat"`
 	Date      int    `json:"date"`
 	Text      string `json:"text"`
+}
+
+func (m *Message) IsCommand() bool {
+	return strings.HasPrefix(m.Text, "/")
 }
 
 type Chat struct {
@@ -63,7 +68,7 @@ func New(token string) *Bot {
 	}
 }
 
-func (b *Bot) SendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
+func (b *Bot) SendMessage(chatID int, text string) *events.APIGatewayProxyResponse {
 	data, err := json.Marshal(&Response{
 		Text:   text,
 		ChatID: chatID,
@@ -113,6 +118,8 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.AP
 		}, nil
 	}
 
+	log.Panicln(lc)
+
 	cc := lc.ClientContext
 
 	data := &Data{}
@@ -125,13 +132,17 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.AP
 
 	bot := New(botToken)
 
+	if !data.Message.IsCommand() {
+		return &events.APIGatewayProxyResponse{StatusCode: 200}, nil
+	}
+
 	switch data.Message.Text {
 	case "/status":
-		return bot.SendMessage("ok", data.Message.Chat.ID), nil
+		return bot.SendMessage(data.Message.Chat.ID, "ok"), nil
 	case "/version":
-		return bot.SendMessage(cc.Client.AppTitle+"-"+cc.Client.AppVersionCode, data.Message.Chat.ID), nil
+		return bot.SendMessage(data.Message.Chat.ID, cc.Client.AppTitle+"-"+cc.Client.AppVersionCode), nil
 	default:
-		return bot.SendMessage("unsupported command", data.Message.Chat.ID), nil
+		return bot.SendMessage(data.Message.Chat.ID, "unsupported command"), nil
 	}
 }
 
