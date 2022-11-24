@@ -92,7 +92,12 @@ func (b *Bot) SendMessage(chatID int, text string) error {
 	return nil
 }
 
-func process(update *Update) error {
+func process(data []byte) error {
+	update := &Update{}
+	if err := json.Unmarshal(data, update); err != nil {
+		return err
+	}
+
 	if !update.Message.IsCommand() {
 		return nil
 	}
@@ -114,15 +119,7 @@ func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse
 		return &events.APIGatewayProxyResponse{StatusCode: 403}, nil
 	}
 
-	update := &Update{}
-	if err := json.Unmarshal([]byte(req.Body), update); err != nil {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 503,
-			Body:       err.Error(),
-		}, nil
-	}
-
-	if err := process(update); err != nil {
+	if err := process([]byte(req.Body)); err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 503,
 			Body:       err.Error(),
