@@ -2,21 +2,69 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/ofen/yourcoffin/internal/bot"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-var botToken string = os.Getenv("TELEGRAM_BOT_TOKEN")
+const contentType = "application/json"
 
-func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
-	data, err := json.Marshal(&bot.Response{
+type Data struct {
+	UpdateID int     `json:"update_id"`
+	Message  Message `json:"message"`
+}
+
+type Response struct {
+	Text   string `json:"text"`
+	ChatID int    `json:"chat_id"`
+}
+
+type Message struct {
+	MessageID int    `json:"message_id"`
+	From      From   `json:"from"`
+	Chat      Chat   `json:"chat"`
+	Date      int    `json:"date"`
+	Text      string `json:"text"`
+}
+
+type Chat struct {
+	ID        int    `json:"id"`
+	FirstName string `json:"first_name"`
+	Username  string `json:"username"`
+	Type      string `json:"type"`
+}
+
+type From struct {
+	ID           int    `json:"id"`
+	IsBot        bool   `json:"is_bot"`
+	FirstName    string `json:"first_name"`
+	Username     string `json:"username"`
+	LanguageCode string `json:"language_code"`
+}
+
+var botToken string = os.Getenv("BOT_TOKEN")
+
+type Bot struct {
+	token   string
+	baseurl string
+}
+
+func New(token string) *Bot {
+	return &Bot{
+		token:   token,
+		baseurl: "https://api.telegram.org/bot" + token,
+	}
+}
+
+func (b *Bot) SendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
+	data, err := json.Marshal(&Response{
 		Text:   text,
 		ChatID: chatID,
 	})
@@ -27,19 +75,8 @@ func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
 		}
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken),
-		bytes.NewReader(data))
+	resp, err := http.Post(b.baseurl+"/sendMessage", contentType, bytes.NewReader(data))
 	if err != nil {
-		log.Println(err)
-		return &events.APIGatewayProxyResponse{
-			StatusCode: http.StatusServiceUnavailable,
-			Body:       err.Error(),
-		}
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Println(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusServiceUnavailable,
 			Body:       err.Error(),
@@ -49,8 +86,10 @@ func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: resp.StatusCode,
+			Body:       string(body),
 		}
 	}
 
@@ -59,16 +98,24 @@ func sendMessage(text string, chatID int) *events.APIGatewayProxyResponse {
 	}
 }
 
-func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	log.Println(req)
+
 	if req.HTTPMethod != http.MethodPost {
+		return &events.APIGatewayProxyResponse{StatusCode: 403}, nil
+	}
+
+	lc, ok := lambdacontext.FromContext(ctx)
+	if !ok {
 		return &events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Body:       "Hello there!",
+			StatusCode: 503,
+			Body:       "Something went wrong :(",
 		}, nil
 	}
 
-	data := &bot.Data{}
+	cc := lc.ClientContext
+
+	data := &Data{}
 	if err := json.Unmarshal([]byte(req.Body), data); err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 503,
@@ -76,11 +123,15 @@ func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse
 		}, nil
 	}
 
+	bot := New(botToken)
+
 	switch data.Message.Text {
 	case "/status":
-		return sendMessage("ok", data.Message.Chat.ID), nil
+		return bot.SendMessage("ok", data.Message.Chat.ID), nil
+	case "/version":
+		return bot.SendMessage(cc.Client.AppTitle+"-"+cc.Client.AppVersionCode, data.Message.Chat.ID), nil
 	default:
-		return sendMessage("unsupported command", data.Message.Chat.ID), nil
+		return bot.SendMessage("unsupported command", data.Message.Chat.ID), nil
 	}
 }
 
