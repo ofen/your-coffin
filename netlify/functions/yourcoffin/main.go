@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,12 +12,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
 const contentType = "application/json"
 
-type Data struct {
+type Update struct {
 	UpdateID int     `json:"update_id"`
 	Message  Message `json:"message"`
 }
@@ -68,82 +67,69 @@ func New(token string) *Bot {
 	}
 }
 
-func (b *Bot) SendMessage(chatID int, text string) *events.APIGatewayProxyResponse {
+func (b *Bot) SendMessage(chatID int, text string) error {
 	data, err := json.Marshal(&Response{
 		Text:   text,
 		ChatID: chatID,
 	})
 	if err != nil {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: http.StatusServiceUnavailable,
-			Body:       err.Error(),
-		}
+		return err
 	}
 
 	resp, err := http.Post(b.baseurl+"/sendMessage", contentType, bytes.NewReader(data))
 	if err != nil {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: http.StatusServiceUnavailable,
-			Body:       err.Error(),
-		}
+		return err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return &events.APIGatewayProxyResponse{
-			StatusCode: resp.StatusCode,
-			Body:       string(body),
-		}
+
+		return errors.New(string(body))
 	}
 
-	return &events.APIGatewayProxyResponse{
-		StatusCode: 200,
+	return nil
+}
+
+func process(update *Update) error {
+	if !update.Message.IsCommand() {
+		return nil
+	}
+
+	bot := New(botToken)
+
+	switch update.Message.Text {
+	case "/status":
+		return bot.SendMessage(update.Message.Chat.ID, "ok")
+	default:
+		return bot.SendMessage(update.Message.Chat.ID, "unsupported command")
 	}
 }
 
-func handler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	log.Println(req)
 
 	if req.HTTPMethod != http.MethodPost {
 		return &events.APIGatewayProxyResponse{StatusCode: 403}, nil
 	}
 
-	lc, ok := lambdacontext.FromContext(ctx)
-	if !ok {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 503,
-			Body:       "Something went wrong :(",
-		}, nil
-	}
-
-	log.Println(lc)
-
-	cc := lc.ClientContext
-
-	data := &Data{}
-	if err := json.Unmarshal([]byte(req.Body), data); err != nil {
+	update := &Update{}
+	if err := json.Unmarshal([]byte(req.Body), update); err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 503,
 			Body:       err.Error(),
 		}, nil
 	}
 
-	bot := New(botToken)
-
-	if !data.Message.IsCommand() {
-		return &events.APIGatewayProxyResponse{StatusCode: 200}, nil
+	if err := process(update); err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: 503,
+			Body:       err.Error(),
+		}, nil
 	}
 
-	switch data.Message.Text {
-	case "/status":
-		return bot.SendMessage(data.Message.Chat.ID, "ok"), nil
-	case "/version":
-		return bot.SendMessage(data.Message.Chat.ID, cc.Client.AppTitle+"-"+cc.Client.AppVersionCode), nil
-	default:
-		return bot.SendMessage(data.Message.Chat.ID, "unsupported command"), nil
-	}
+	return &events.APIGatewayProxyResponse{StatusCode: 200}, nil
 }
 
 func main() {
