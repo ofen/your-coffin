@@ -1,83 +1,87 @@
 package bot
 
 import (
-	"encoding/xml"
-	"fmt"
-	"io"
-	"os"
-
-	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"golang.org/x/text/encoding/charmap"
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
 )
 
-const (
-	curencyEndpoint  string = "http://www.cbr.ru/scripts/XML_daily.asp"
-	metersDateFormat string = "02.01.2006"
-)
+const contentType = "application/json"
 
-func New(token string) (*Bot, error) {
-	api, err := tg.NewBotAPI(os.Getenv("BOT_TOKEN"))
+// Bot is bot structure.
+type Bot struct {
+	Token    string
+	Client   *http.Client
+	baseurl  string
+	commands map[string]func(*Update) error
+}
+
+// New is bot constructor
+func New(token string) *Bot {
+	return &Bot{
+		Token:    token,
+		Client:   &http.Client{},
+		baseurl:  "https://api.telegram.org/bot" + token,
+		commands: make(map[string]func(*Update) error),
+	}
+}
+
+func (b *Bot) call(method string, req interface{}) (*http.Response, error) {
+	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if os.Getenv("DEBUG") == "true" {
-		api.Debug = true
-	}
-
-	return &Bot{
-		api,
-		make(map[int64]handlerFunc),
-	}, nil
+	return b.Client.Post(b.baseurl+method, contentType, bytes.NewReader(data))
 }
 
-type Bot struct {
-	*tg.BotAPI
-	nextHandler map[int64]handlerFunc
-}
-
-func (b *Bot) RegisterNextStepHandler(message *tg.Message, f handlerFunc) {
-	b.nextHandler[message.Chat.ID] = f
-}
-
-func (b *Bot) NextStepHandler(message *tg.Message) handlerFunc {
-	f, ok := b.nextHandler[message.Chat.ID]
-	if ok {
-		delete(b.nextHandler, message.Chat.ID)
-		return f
-	}
-	return nil
-}
-
-func newXMLDecoder(r io.Reader) *xml.Decoder {
-	d := xml.NewDecoder(r)
-
-	d.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
-		if charset == "windows-1251" {
-			return charmap.Windows1251.NewDecoder().Reader(input), nil
-		}
-		return nil, fmt.Errorf("unknown charset: %s", charset)
-	}
-
-	return d
-}
-
-func (b *Bot) SetCommands() error {
-	commands := tg.NewSetMyCommands(
-		tg.BotCommand{Command: "status", Description: "check bot status"},
-		tg.BotCommand{Command: "currency", Description: "chech current exchange rate"},
-		tg.BotCommand{Command: "meters", Description: "set meters"},
-		tg.BotCommand{Command: "lastmeters", Description: "show last meters"},
-		tg.BotCommand{Command: "whoami", Description: "show info about requesting user"},
-	)
-	r, err := b.Request(commands)
+// SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
+func (b *Bot) SendMessage(chatID int, text string) error {
+	resp, err := b.call("/sendMessage", &SendMessageRequest{
+		Text:   text,
+		ChatID: chatID,
+	})
 	if err != nil {
 		return err
 	}
 
-	if !r.Ok {
-		return fmt.Errorf(string(r.Result))
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+
+		return errors.New(string(body))
 	}
 
 	return nil
+}
+
+// Command sets bot command.
+func (b *Bot) Command(command string, fn func(update *Update) error) {
+	b.commands[command] = fn
+}
+
+// HandleCommand handles update with command.
+func (b *Bot) HandleCommand(update *Update) error {
+	if update.Message.IsBot() {
+		return nil
+	}
+
+	if !update.Message.IsCommand() {
+		return nil
+	}
+
+	args := update.Message.Args()
+	if len(args) < 1 {
+		return nil
+	}
+
+	fn, ok := b.commands[update.Message.Args()[0]]
+	if !ok {
+		return nil
+	}
+
+	return fn(update)
 }

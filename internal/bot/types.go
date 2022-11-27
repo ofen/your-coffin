@@ -1,29 +1,75 @@
 package bot
 
 import (
-	"encoding/xml"
-
-	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"strings"
 )
 
-type Data struct {
-	UpdateID int     `json:"update_id"`
-	Message  Message `json:"message"`
-}
+// MessageEntity types https://core.telegram.org/bots/api#messageentity.
+const (
+	MessageEntityBotCommand    string = "bot_command"
+	MessageEntityMention       string = "mention"
+	MessageEntityHashTag       string = "hashtag"
+	MessageEntityCashTag       string = "cashtag"
+	MessageEntityURL           string = "url"
+	MessageEntityEmail         string = "email"
+	MessageEntityPhoneNumber   string = "phone_number"
+	MessageEntityBold          string = "bold"
+	MessageEntityItalic        string = "italic"
+	MessageEntityUnderline     string = "underline"
+	MessageEntityStrikethrough string = "strikethrough"
+	MessageEntitySpoiler       string = "spoiler"
+	MessageEntityCode          string = "code"
+	MessageEntityPre           string = "pre"
+	MessageEntityTextLink      string = "text_link"
+	MessageEntityTextMention   string = "text_mention"
+	MessageEntityCustomEmoji   string = "custom_emoji"
+)
 
-type Response struct {
+// SendMessageRequest https://core.telegram.org/bots/api#sendmessage.
+type SendMessageRequest struct {
 	Text   string `json:"text"`
 	ChatID int    `json:"chat_id"`
 }
 
-type Message struct {
-	MessageID int    `json:"message_id"`
-	From      From   `json:"from"`
-	Chat      Chat   `json:"chat"`
-	Date      int    `json:"date"`
-	Text      string `json:"text"`
+// Update https://core.telegram.org/bots/api#update.
+type Update struct {
+	UpdateID int     `json:"update_id"`
+	Message  Message `json:"message"`
 }
 
+// Message https://core.telegram.org/bots/api#message.
+type Message struct {
+	MessageID int             `json:"message_id"`
+	From      User            `json:"from"`
+	Chat      Chat            `json:"chat"`
+	Date      int             `json:"date"`
+	Text      string          `json:"text"`
+	Entities  []MessageEntity `json:"entities"`
+}
+
+func (m *Message) IsBot() bool {
+	return m.From.IsBot
+}
+
+func (m *Message) IsCommand() bool {
+	for _, e := range m.Entities {
+		if e.Type == MessageEntityBotCommand {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (m *Message) Args() []string {
+	if !m.IsCommand() {
+		return []string{}
+	}
+
+	return strings.Fields(m.Text)
+}
+
+// Chat https://core.telegram.org/bots/api#chat.
 type Chat struct {
 	ID        int    `json:"id"`
 	FirstName string `json:"first_name"`
@@ -31,7 +77,8 @@ type Chat struct {
 	Type      string `json:"type"`
 }
 
-type From struct {
+// User https://core.telegram.org/bots/api#user.
+type User struct {
 	ID           int    `json:"id"`
 	IsBot        bool   `json:"is_bot"`
 	FirstName    string `json:"first_name"`
@@ -39,48 +86,13 @@ type From struct {
 	LanguageCode string `json:"language_code"`
 }
 
-type valCurs struct {
-	XMLName xml.Name `xml:"ValCurs"`
-	Text    string   `xml:",chardata"`
-	Date    string   `xml:"Date,attr"`
-	Name    string   `xml:"name,attr"`
-	Valute  []struct {
-		Text     string `xml:",chardata"`
-		ID       string `xml:"ID,attr"`
-		NumCode  string `xml:"NumCode"`
-		CharCode string `xml:"CharCode"`
-		Nominal  int    `xml:"Nominal"`
-		Name     string `xml:"Name"`
-		Value    string `xml:"Value"`
-	} `xml:"Valute"`
+// MessageEntity https://core.telegram.org/bots/api#messageentity.
+type MessageEntity struct {
+	Offeset       int    `json:"offset"`
+	Length        int    `json:"length"`
+	Type          string `json:"type"`
+	URL           string `json:"url"`
+	User          User   `json:"user"`
+	Language      string `json:"language"`
+	CustomEmojiID string `json:"custom_emoji_id"`
 }
-
-type meters struct {
-	hotWater      int
-	coldWater     int
-	electricityT1 int
-	electricityT2 int
-}
-
-type handlerFunc func(*tg.Message)
-
-type contextKey string
-
-func (c contextKey) String() string {
-	return string(c)
-}
-
-// type exchangeRates struct {
-// 	Date  time.Time `xml:"Date,attr"`
-// 	Name  string    `xml:"name,attr"`
-// 	Rates []rate    `xml:"Valute"`
-// }
-
-// type rate struct {
-// 	ID       string  `xml:"ID,attr"`
-// 	NumCode  int     `xml:"NumCode"`
-// 	CharCode string  `xml:"CharCode"`
-// 	Nominal  int     `xml:"Nominal"`
-// 	Name     string  `xml:"Name"`
-// 	Value    float32 `xml:"Value"`
-// }
