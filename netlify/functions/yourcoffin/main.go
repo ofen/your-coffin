@@ -31,6 +31,7 @@ func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, 
 	}
 
 	if err := b.HandleCommand(update); err != nil {
+		log.Println(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
 			Body:       err.Error(),

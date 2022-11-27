@@ -25,13 +25,14 @@ const (
 	MessageEntityCustomEmoji   string = "custom_emoji"
 )
 
+// https://core.telegram.org/bots/api#formatting-options.
 const (
 	ParseModeMarkdownV2 string = "MarkdownV2"
 	ParseModeHTML       string = "HTML"
 	ParseModeMarkdown   string = "Markdown"
 )
 
-type SendMessageOptions struct {
+type SendMessageOption struct {
 	ParseMode string
 }
 
