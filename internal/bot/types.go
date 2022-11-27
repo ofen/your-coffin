@@ -25,10 +25,32 @@ const (
 	MessageEntityCustomEmoji   string = "custom_emoji"
 )
 
+const (
+	ParseModeMarkdownV2 string = "MarkdownV2"
+	ParseModeHTML       string = "HTML"
+	ParseModeMarkdown   string = "Markdown"
+)
+
+type SendMessageOptions struct {
+	ParseMode string
+}
+
 // SendMessageRequest https://core.telegram.org/bots/api#sendmessage.
 type SendMessageRequest struct {
-	Text   string `json:"text"`
-	ChatID int    `json:"chat_id"`
+	Text      string `json:"text"`
+	ChatID    int    `json:"chat_id"`
+	ParseMode string `json:"parse_mode"`
+}
+
+// GetMyCommandsResponse https://core.telegram.org/bots/api#getmycommands.
+type GetMyCommandsResponse struct {
+	OK     bool         `json:"ok"`
+	Result []BotCommand `json:"result"`
+}
+
+type BotCommand struct {
+	Command     string `json:"command"`
+	Description string `json:"description"`
 }
 
 // Update https://core.telegram.org/bots/api#update.

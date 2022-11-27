@@ -40,8 +40,9 @@ func (b *Bot) call(method string, req interface{}) (*http.Response, error) {
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
 func (b *Bot) SendMessage(chatID int, text string) error {
 	resp, err := b.call("/sendMessage", &SendMessageRequest{
-		Text:   text,
-		ChatID: chatID,
+		Text:      text,
+		ChatID:    chatID,
+		ParseMode: ParseModeMarkdownV2,
 	})
 	if err != nil {
 		return err
@@ -56,6 +57,29 @@ func (b *Bot) SendMessage(chatID int, text string) error {
 	}
 
 	return nil
+}
+
+// GetMyCommands https://core.telegram.org/bots/api#getmycommands.
+func (b *Bot) GetMyCommands() ([]BotCommand, error) {
+	resp, err := b.call("/getMyCommands", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+
+		return nil, errors.New(string(body))
+	}
+
+	result := &GetMyCommandsResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		return nil, err
+	}
+
+	return result.Result, nil
 }
 
 // Command sets bot command.
