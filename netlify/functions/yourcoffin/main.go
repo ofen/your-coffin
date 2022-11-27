@@ -64,6 +64,7 @@ func init() {
 }
 
 func main() {
+	fmt.Println(b.GetMyCommands())
 	lambda.Start(handler)
 }
 

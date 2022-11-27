@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 const contentType = "application/json"
@@ -40,7 +41,7 @@ func (b *Bot) call(method string, req interface{}) (*http.Response, error) {
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
 func (b *Bot) SendMessage(chatID int, text string) error {
 	resp, err := b.call("/sendMessage", &SendMessageRequest{
-		Text:      text,
+		Text:      strings.ReplaceAll(text, "-", "\\-"),
 		ChatID:    chatID,
 		ParseMode: ParseModeMarkdownV2,
 	})
