@@ -54,7 +54,7 @@ func init() {
 
 		var text string
 		for _, command := range commands {
-			text += fmt.Sprintf("- **%s:** %s\n", command.Command, command.Description)
+			text += fmt.Sprintf("- /%s %s\n", command.Command, command.Description)
 		}
 
 		text = strings.TrimRight(text, "\n")

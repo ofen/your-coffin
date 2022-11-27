@@ -41,7 +41,7 @@ func (b *Bot) call(method string, req interface{}) (*http.Response, error) {
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
 func (b *Bot) SendMessage(chatID int, text string) error {
 	resp, err := b.call("/sendMessage", &SendMessageRequest{
-		Text:      strings.ReplaceAll(text, "-", "\\-"),
+		Text:      MarkdownV2Escape(text),
 		ChatID:    chatID,
 		ParseMode: ParseModeMarkdownV2,
 	})
@@ -109,4 +109,29 @@ func (b *Bot) HandleCommand(update *Update) error {
 	}
 
 	return fn(update)
+}
+
+func MarkdownV2Escape(s string) string {
+	pairs := []string{
+		"_", "\\_",
+		"*", "*",
+		"[", "\\[",
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)",
+		"~", "\\~",
+		"`", "\\`",
+		">", "\\>",
+		"#", "\\#",
+		"+", "\\+",
+		"-", "\\-",
+		"=", "\\=",
+		"|", "\\|",
+		"{", "\\{",
+		"}", "\\}",
+		".", "\\.",
+		"!", "\\!",
+	}
+
+	return strings.NewReplacer(pairs...).Replace(s)
 }
