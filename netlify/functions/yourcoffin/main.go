@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/ofen/yourcoffin/internal/bot"
+	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
 var b = bot.New(os.Getenv("BOT_TOKEN"))
@@ -22,7 +23,7 @@ func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, 
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusForbidden}, nil
 	}
 
-	update := &bot.Update{}
+	update := &types.Update{}
 	if err := json.Unmarshal([]byte(r.Body), update); err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusUnprocessableEntity,
@@ -42,11 +43,11 @@ func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, 
 }
 
 func init() {
-	b.Command("/status", func(update *bot.Update) error {
+	b.Command("/status", func(update *types.Update) error {
 		return b.SendMessage(update.Message.Chat.ID, "ok")
 	})
 
-	b.Command("/help", func(update *bot.Update) error {
+	b.Command("/help", func(update *types.Update) error {
 		commands, err := b.GetMyCommands()
 		if err != nil {
 			return err
@@ -54,7 +55,7 @@ func init() {
 
 		var text string
 		for _, command := range commands {
-			text += fmt.Sprintf("- /%s %s\n", command.Command, command.Description)
+			text += fmt.Sprintf("/%s - %s\n", command.Command, command.Description)
 		}
 
 		text = strings.TrimRight(text, "\n")
@@ -64,7 +65,6 @@ func init() {
 }
 
 func main() {
-	fmt.Println(b.GetMyCommands())
 	lambda.Start(handler)
 }
 

@@ -3,10 +3,11 @@ package bot
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"io/ioutil"
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
 const contentType = "application/json"
@@ -16,7 +17,7 @@ type Bot struct {
 	Token    string
 	Client   *http.Client
 	baseurl  string
-	commands map[string]func(*Update) error
+	commands map[string]func(*types.Update) error
 }
 
 // New is bot constructor
@@ -25,12 +26,23 @@ func New(token string) *Bot {
 		Token:    token,
 		Client:   &http.Client{},
 		baseurl:  "https://api.telegram.org/bot" + token,
-		commands: make(map[string]func(*Update) error),
+		commands: make(map[string]func(*types.Update) error),
 	}
 }
 
-func (b *Bot) call(method string, req interface{}) (*http.Response, error) {
-	data, err := json.Marshal(req)
+func (b *Bot) Send(v interface{}) (*http.Response, error) {
+	var method string
+
+	switch v.(type) {
+	case types.SendMessage, *types.SendMessage:
+		method = "/sendMessage"
+	case types.GetMyCommands, *types.GetMyCommands:
+		method = "/getMyCommands"
+	default:
+		return nil, fmt.Errorf("not supported")
+	}
+
+	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
@@ -40,10 +52,10 @@ func (b *Bot) call(method string, req interface{}) (*http.Response, error) {
 
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
 func (b *Bot) SendMessage(chatID int, text string) error {
-	resp, err := b.call("/sendMessage", &SendMessageRequest{
+	resp, err := b.Send(&types.SendMessage{
 		Text:      MarkdownV2Escape(text),
 		ChatID:    chatID,
-		ParseMode: ParseModeMarkdownV2,
+		ParseMode: types.ParseModeMarkdownV2,
 	})
 	if err != nil {
 		return err
@@ -51,45 +63,50 @@ func (b *Bot) SendMessage(chatID int, text string) error {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+	v := &types.SendMessageResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return err
+	}
 
-		return errors.New(string(body))
+	if !v.OK {
+		return fmt.Errorf("bot: %d %s", v.ErrorCode, v.Description)
 	}
 
 	return nil
 }
 
 // GetMyCommands https://core.telegram.org/bots/api#getmycommands.
-func (b *Bot) GetMyCommands() ([]BotCommand, error) {
-	resp, err := b.call("/getMyCommands", nil)
+func (b *Bot) GetMyCommands() ([]types.BotCommand, error) {
+	resp, err := b.Send(&types.GetMyCommands{})
 	if err != nil {
 		return nil, err
 	}
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-
-		return nil, errors.New(string(body))
-	}
-
-	result := &GetMyCommandsResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+	v := &types.GetMyCommandsResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 		return nil, err
 	}
 
-	return result.Result, nil
+	if !v.OK {
+		return nil, fmt.Errorf("bot: %d %s", v.ErrorCode, v.Description)
+	}
+
+	return v.Result, nil
 }
 
 // Command sets bot command.
-func (b *Bot) Command(command string, fn func(update *Update) error) {
+func (b *Bot) Command(command string, fn func(update *types.Update) error) {
+	if !strings.HasPrefix(command, "/") {
+		panic("not a command: " + command)
+	}
+
 	b.commands[command] = fn
 }
 
 // HandleCommand handles update with command.
-func (b *Bot) HandleCommand(update *Update) error {
+func (b *Bot) HandleCommand(update *types.Update) error {
 	if update.Message.IsBot() {
 		return nil
 	}

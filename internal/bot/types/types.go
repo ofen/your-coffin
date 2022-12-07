@@ -1,4 +1,4 @@
-package bot
+package types
 
 import (
 	"strings"
@@ -36,16 +36,23 @@ type SendMessageOption struct {
 	ParseMode string
 }
 
-// SendMessageRequest https://core.telegram.org/bots/api#sendmessage.
-type SendMessageRequest struct {
+// SendMessage https://core.telegram.org/bots/api#sendmessage.
+type SendMessage struct {
 	Text      string `json:"text"`
 	ChatID    int    `json:"chat_id"`
 	ParseMode string `json:"parse_mode"`
 }
 
+type SendMessageResponse struct {
+	Response
+	Result Message `json:"result"`
+}
+
+type GetMyCommands struct{}
+
 // GetMyCommandsResponse https://core.telegram.org/bots/api#getmycommands.
 type GetMyCommandsResponse struct {
-	OK     bool         `json:"ok"`
+	Response
 	Result []BotCommand `json:"result"`
 }
 
@@ -118,4 +125,11 @@ type MessageEntity struct {
 	User          User   `json:"user"`
 	Language      string `json:"language"`
 	CustomEmojiID string `json:"custom_emoji_id"`
+}
+
+type Response struct {
+	OK          bool        `json:"ok"`
+	ErrorCode   int         `json:"error_code"`
+	Description string      `json:"description"`
+	Result      interface{} `json:"result"`
 }
