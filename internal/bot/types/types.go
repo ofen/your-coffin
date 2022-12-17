@@ -87,14 +87,14 @@ type Message struct {
 	Entities  []MessageEntity `json:"entities"`
 }
 
-func (t *Message) UnmarshalJSON(data []byte) error {
-	type alias Message
+func (m *Message) UnmarshalJSON(data []byte) error {
+	type Alias Message
 
 	tmp := struct {
-		Date int
-		*alias
+		Date int `json:"date"`
+		*Alias
 	}{
-		alias: (*alias)(t),
+		Alias: (*Alias)(m),
 	}
 
 	err := json.Unmarshal(data, &tmp)
@@ -102,7 +102,7 @@ func (t *Message) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	t.Date = time.Unix(int64(tmp.Date), 0)
+	m.Date = time.Unix(int64(tmp.Date), 0)
 
 	return nil
 }
