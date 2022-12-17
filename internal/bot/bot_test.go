@@ -1,90 +1,15 @@
 package bot
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
 func TestHandleUpdate(t *testing.T) {
-	args := []*types.Update{
-		{
-			UpdateID: 1234567890,
-			Message: types.Message{
-				MessageID: 1,
-				From: types.User{
-					ID:           1234567890,
-					IsBot:        false,
-					FirstName:    "User",
-					Username:     "user",
-					LanguageCode: "en",
-				},
-				Chat: types.Chat{
-					ID:        1234567890,
-					FirstName: "User",
-					Username:  "user",
-					Type:      "private",
-				},
-				Date: 1669545311,
-				Text: "/test",
-				Entities: []types.MessageEntity{
-					{
-						Type:    types.MessageEntityBotCommand,
-						Offeset: 0,
-						Length:  5,
-					},
-				},
-			},
-		},
-		{
-			UpdateID: 1234567890,
-			Message: types.Message{
-				MessageID: 1,
-				From: types.User{
-					ID:           1234567890,
-					IsBot:        false,
-					FirstName:    "User",
-					Username:     "user",
-					LanguageCode: "en",
-				},
-				Chat: types.Chat{
-					ID:        1234567890,
-					FirstName: "User",
-					Username:  "user",
-					Type:      "private",
-				},
-				Date: 1669545311,
-				Text: "/test first second third",
-				Entities: []types.MessageEntity{
-					{
-						Type:    types.MessageEntityBotCommand,
-						Offeset: 0,
-						Length:  5,
-					},
-				},
-			},
-		},
-		{
-			UpdateID: 1234567890,
-			Message: types.Message{
-				MessageID: 1,
-				From: types.User{
-					ID:           1234567890,
-					IsBot:        false,
-					FirstName:    "User",
-					Username:     "user",
-					LanguageCode: "en",
-				},
-				Chat: types.Chat{
-					ID:        1234567890,
-					FirstName: "User",
-					Username:  "user",
-					Type:      "private",
-				},
-				Date: 1669545311,
-				Text: "test first second third",
-			},
-		},
+	args := []string{
+		`{"update_id":1234567890,"message":{"message_id":1,"from":{"id":1234567890,"is_bot":false,"first_name":"User","username":"user","language_code":"en"},"chat":{"id":1234567890,"first_name":"User","username":"user","type":"private"},"date":1669545311,"text":"/test","entities":[{"offset":0,"length":5,"type":"bot_command","url":"","user":{"id":0,"is_bot":false,"first_name":"","username":"","language_code":""},"language":"","custom_emoji_id":""}]}}`,
 	}
 
 	b := New("")
@@ -94,8 +19,15 @@ func TestHandleUpdate(t *testing.T) {
 		return nil
 	})
 
-	for _, u := range args {
-		if err := b.HandleCommand(u); err != nil {
+	for _, arg := range args {
+		u := &types.Update{}
+		err := json.Unmarshal([]byte(arg), &u)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = b.HandleCommand(u)
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
