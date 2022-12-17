@@ -158,7 +158,7 @@ func init() {
 
 		date := update.Message.Date.Format(metersDateFmt)
 
-		err := gs.AppendRow(date, values)
+		err := gs.AppendRow([]interface{}{date, values[0], values[1], values[2], values[3]})
 		if err != nil {
 			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
