@@ -82,7 +82,7 @@ func (b *Bot) GetMyCommands() ([]*types.BotCommand, error) {
 	}
 
 	v := []*types.BotCommand{}
-	return v, json.Unmarshal(data, v)
+	return v, json.Unmarshal(data, &v)
 }
 
 // Command sets bot command.
