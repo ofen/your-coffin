@@ -29,7 +29,7 @@ type Sheet struct {
 	name string
 }
 
-func (s *Sheet) AppendRow(values []interface{}) error {
+func (s *Sheet) AppendRow(values ...interface{}) error {
 	svc, err := newService(context.Background())
 	if err != nil {
 		return err

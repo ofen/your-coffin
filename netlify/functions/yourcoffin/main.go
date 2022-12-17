@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -14,6 +15,8 @@ import (
 	"github.com/ofen/yourcoffin/internal/bot/types"
 	"github.com/ofen/yourcoffin/internal/googlesheets"
 )
+
+const metersDateFmt string = "02.01.2006"
 
 var (
 	b  = bot.New(os.Getenv("BOT_TOKEN"))
@@ -80,6 +83,8 @@ func init() {
 	b.Command("/help", func(update *types.Update) error {
 		commands, err := b.GetMyCommands()
 		if err != nil {
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
 			return err
 		}
 
@@ -102,7 +107,9 @@ func init() {
 
 		v, err := gs.LastRow()
 		if err != nil {
-			b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
+			return err
 		}
 
 		_, err = b.SendMessage(
@@ -115,6 +122,58 @@ func init() {
 					"\nelectricity (t1): %v"+
 					"\nelectricity (t2): %v",
 				v[:5]...,
+			),
+		)
+
+		return err
+	})
+
+	b.Command("/meters", func(update *types.Update) error {
+		if !IsAllowed(update) {
+			return nil
+		}
+
+		args := update.Message.Args()
+		if len(args) < 2 {
+			b.SendMessage(update.Message.Chat.ID, "cannot be used without arguments")
+
+			return nil
+		}
+
+		values := strings.Split(args[1], ",")
+		if len(values) != 4 {
+			_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument")
+
+			return err
+		}
+
+		for _, v := range values {
+			_, err := strconv.Atoi(v)
+			if err != nil {
+				_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
+				return err
+			}
+		}
+
+		date := update.Message.Date.Format(metersDateFmt)
+
+		err := gs.AppendRow(date, values)
+		if err != nil {
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
+			return err
+		}
+
+		_, err = b.SendMessage(
+			update.Message.Chat.ID,
+			fmt.Sprintf("*meters updated*"+
+				"\n\ndate: %v"+
+				"\nhot water: %v"+
+				"\ncold water: %v"+
+				"\nelectricity (t1): %v"+
+				"\nelectricity (t2): %v",
+				date, values[0], values[1], values[2], values[3],
 			),
 		)
 

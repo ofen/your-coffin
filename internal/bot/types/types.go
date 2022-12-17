@@ -1,8 +1,10 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // MessageEntity types https://core.telegram.org/bots/api#messageentity.
@@ -80,9 +82,29 @@ type Message struct {
 	MessageID int             `json:"message_id"`
 	From      User            `json:"from"`
 	Chat      Chat            `json:"chat"`
-	Date      int             `json:"date"`
+	Date      time.Time       `json:"date"`
 	Text      string          `json:"text"`
 	Entities  []MessageEntity `json:"entities"`
+}
+
+func (t *Message) UnmarshalJSON(data []byte) error {
+	type alias Message
+
+	tmp := struct {
+		Date int
+		*alias
+	}{
+		alias: (*alias)(t),
+	}
+
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+
+	t.Date = time.Unix(int64(tmp.Date), 0)
+
+	return nil
 }
 
 func (m *Message) IsBot() bool {
