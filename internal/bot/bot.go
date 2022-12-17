@@ -12,6 +12,10 @@ import (
 
 const contentType = "application/json"
 
+type Request interface {
+	Method() string
+}
+
 // Bot is bot structure.
 type Bot struct {
 	Token    string
@@ -30,70 +34,55 @@ func New(token string) *Bot {
 	}
 }
 
-func (b *Bot) Send(v interface{}) (*http.Response, error) {
-	var method string
-
-	switch v.(type) {
-	case types.SendMessage, *types.SendMessage:
-		method = "/sendMessage"
-	case types.GetMyCommands, *types.GetMyCommands:
-		method = "/getMyCommands"
-	default:
-		return nil, fmt.Errorf("not supported")
+func (b *Bot) Send(r Request) (json.RawMessage, error) {
+	data, err := json.Marshal(r)
+	if err != nil {
+		return nil, fmt.Errorf("bot: %w", err)
 	}
 
-	data, err := json.Marshal(v)
+	resp, err := b.Client.Post(b.baseurl+"/"+r.Method(), contentType, bytes.NewReader(data))
 	if err != nil {
+		return nil, fmt.Errorf("bot: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	v := &types.Response[json.RawMessage]{}
+	if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
 		return nil, err
 	}
 
-	return b.Client.Post(b.baseurl+method, contentType, bytes.NewReader(data))
+	if err = v.IsError(); err != nil {
+		return nil, err
+	}
+
+	return v.Result, nil
 }
 
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
-func (b *Bot) SendMessage(chatID int, text string) error {
-	resp, err := b.Send(&types.SendMessage{
+func (b *Bot) SendMessage(chatID int, text string) (*types.Message, error) {
+	data, err := b.Send(types.SendMessage{
 		Text:      MarkdownV2Escape(text),
 		ChatID:    chatID,
 		ParseMode: types.ParseModeMarkdownV2,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	defer resp.Body.Close()
-
-	v := &types.SendMessageResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
-		return err
-	}
-
-	if !v.OK {
-		return fmt.Errorf("bot: %d %s", v.ErrorCode, v.Description)
-	}
-
-	return nil
+	v := &types.Message{}
+	return v, json.Unmarshal(data, v)
 }
 
 // GetMyCommands https://core.telegram.org/bots/api#getmycommands.
-func (b *Bot) GetMyCommands() ([]types.BotCommand, error) {
-	resp, err := b.Send(&types.GetMyCommands{})
+func (b *Bot) GetMyCommands() ([]*types.BotCommand, error) {
+	data, err := b.Send(types.GetMyCommands{})
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-
-	v := &types.GetMyCommandsResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
-		return nil, err
-	}
-
-	if !v.OK {
-		return nil, fmt.Errorf("bot: %d %s", v.ErrorCode, v.Description)
-	}
-
-	return v.Result, nil
+	v := []*types.BotCommand{}
+	return v, json.Unmarshal(data, v)
 }
 
 // Command sets bot command.

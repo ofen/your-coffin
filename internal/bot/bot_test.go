@@ -2,22 +2,24 @@ package bot
 
 import (
 	"testing"
+
+	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
 func TestHandleUpdate(t *testing.T) {
-	args := []*Update{
+	args := []*types.Update{
 		{
 			UpdateID: 1234567890,
-			Message: Message{
+			Message: types.Message{
 				MessageID: 1,
-				From: User{
+				From: types.User{
 					ID:           1234567890,
 					IsBot:        false,
 					FirstName:    "User",
 					Username:     "user",
 					LanguageCode: "en",
 				},
-				Chat: Chat{
+				Chat: types.Chat{
 					ID:        1234567890,
 					FirstName: "User",
 					Username:  "user",
@@ -25,9 +27,9 @@ func TestHandleUpdate(t *testing.T) {
 				},
 				Date: 1669545311,
 				Text: "/test",
-				Entities: []MessageEntity{
+				Entities: []types.MessageEntity{
 					{
-						Type:    MessageEntityBotCommand,
+						Type:    types.MessageEntityBotCommand,
 						Offeset: 0,
 						Length:  5,
 					},
@@ -36,16 +38,16 @@ func TestHandleUpdate(t *testing.T) {
 		},
 		{
 			UpdateID: 1234567890,
-			Message: Message{
+			Message: types.Message{
 				MessageID: 1,
-				From: User{
+				From: types.User{
 					ID:           1234567890,
 					IsBot:        false,
 					FirstName:    "User",
 					Username:     "user",
 					LanguageCode: "en",
 				},
-				Chat: Chat{
+				Chat: types.Chat{
 					ID:        1234567890,
 					FirstName: "User",
 					Username:  "user",
@@ -53,9 +55,9 @@ func TestHandleUpdate(t *testing.T) {
 				},
 				Date: 1669545311,
 				Text: "/test first second third",
-				Entities: []MessageEntity{
+				Entities: []types.MessageEntity{
 					{
-						Type:    MessageEntityBotCommand,
+						Type:    types.MessageEntityBotCommand,
 						Offeset: 0,
 						Length:  5,
 					},
@@ -64,16 +66,16 @@ func TestHandleUpdate(t *testing.T) {
 		},
 		{
 			UpdateID: 1234567890,
-			Message: Message{
+			Message: types.Message{
 				MessageID: 1,
-				From: User{
+				From: types.User{
 					ID:           1234567890,
 					IsBot:        false,
 					FirstName:    "User",
 					Username:     "user",
 					LanguageCode: "en",
 				},
-				Chat: Chat{
+				Chat: types.Chat{
 					ID:        1234567890,
 					FirstName: "User",
 					Username:  "user",
@@ -86,7 +88,7 @@ func TestHandleUpdate(t *testing.T) {
 	}
 
 	b := New("")
-	b.Command("/test", func(update *Update) error {
+	b.Command("/test", func(update *types.Update) error {
 		t.Log(update.Message.Args())
 
 		return nil

@@ -12,15 +12,43 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/ofen/yourcoffin/internal/bot"
 	"github.com/ofen/yourcoffin/internal/bot/types"
+	"github.com/ofen/yourcoffin/internal/googlesheets"
 )
 
-var b = bot.New(os.Getenv("BOT_TOKEN"))
+var (
+	b  = bot.New(os.Getenv("BOT_TOKEN"))
+	gs = googlesheets.New(os.Getenv("GOOGLE_SPREADSHEET"))
+)
+
+type User struct {
+	ID int `json:"id"`
+}
+
+func AllowedUsers() []User {
+	users := []User{}
+	date := []byte(os.Getenv("ALLOWED_USERS"))
+	json.Unmarshal(date, &users)
+
+	return users
+}
+
+func IsAllowed(update *types.Update) bool {
+	users := AllowedUsers()
+
+	for _, user := range users {
+		if user.ID == update.Message.Chat.ID {
+			return true
+		}
+	}
+
+	return false
+}
 
 func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	log.Println(r)
 
 	if r.HTTPMethod != http.MethodPost {
-		return &events.APIGatewayProxyResponse{StatusCode: http.StatusForbidden}, nil
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusMethodNotAllowed}, nil
 	}
 
 	update := &types.Update{}
@@ -44,7 +72,9 @@ func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, 
 
 func init() {
 	b.Command("/status", func(update *types.Update) error {
-		return b.SendMessage(update.Message.Chat.ID, "ok")
+		_, err := b.SendMessage(update.Message.Chat.ID, "ok")
+
+		return err
 	})
 
 	b.Command("/help", func(update *types.Update) error {
@@ -60,7 +90,35 @@ func init() {
 
 		text = strings.TrimRight(text, "\n")
 
-		return b.SendMessage(update.Message.Chat.ID, text)
+		_, err = b.SendMessage(update.Message.Chat.ID, text)
+
+		return err
+	})
+
+	b.Command("/lastmeters", func(update *types.Update) error {
+		if !IsAllowed(update) {
+			return nil
+		}
+
+		v, err := gs.LastRow()
+		if err != nil {
+			b.SendMessage(update.Message.Chat.ID, err.Error())
+		}
+
+		_, err = b.SendMessage(
+			update.Message.Chat.ID,
+			fmt.Sprintf(
+				"*here is the last meters*"+
+					"\n\ndate: %v"+
+					"\nhot water: %v"+
+					"\ncold water: %v"+
+					"\nelectricity (t1): %v"+
+					"\nelectricity (t2): %v",
+				v[:5]...,
+			),
+		)
+
+		return err
 	})
 }
 

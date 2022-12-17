@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -38,22 +39,29 @@ type SendMessageOption struct {
 
 // SendMessage https://core.telegram.org/bots/api#sendmessage.
 type SendMessage struct {
-	Text      string `json:"text"`
-	ChatID    int    `json:"chat_id"`
-	ParseMode string `json:"parse_mode"`
+	Text      string  `json:"text"`
+	ChatID    int     `json:"chat_id"`
+	ParseMode string  `json:"parse_mode"`
+	Result    Message `json:"result"`
+}
+
+func (m SendMessage) Method() string {
+	return "sendMessage"
 }
 
 type SendMessageResponse struct {
-	Response
-	Result Message `json:"result"`
+	Response[Message]
 }
 
 type GetMyCommands struct{}
 
+func (m GetMyCommands) Method() string {
+	return "getMyCommands"
+}
+
 // GetMyCommandsResponse https://core.telegram.org/bots/api#getmycommands.
 type GetMyCommandsResponse struct {
-	Response
-	Result []BotCommand `json:"result"`
+	Response[[]BotCommand]
 }
 
 type BotCommand struct {
@@ -127,9 +135,17 @@ type MessageEntity struct {
 	CustomEmojiID string `json:"custom_emoji_id"`
 }
 
-type Response struct {
-	OK          bool        `json:"ok"`
-	ErrorCode   int         `json:"error_code"`
-	Description string      `json:"description"`
-	Result      interface{} `json:"result"`
+type Response[T any] struct {
+	OK          bool   `json:"ok"`
+	ErrorCode   int    `json:"error_code"`
+	Description string `json:"description"`
+	Result      T      `json:"result"`
+}
+
+func (r Response[T]) IsError() error {
+	if r.OK {
+		return nil
+	}
+
+	return fmt.Errorf("%d %s", r.ErrorCode, r.Description)
 }
