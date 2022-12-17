@@ -135,9 +135,9 @@ func init() {
 
 		args := update.Message.Args()
 		if len(args) < 2 {
-			b.SendMessage(update.Message.Chat.ID, "cannot be used without arguments")
+			_, err := b.SendMessage(update.Message.Chat.ID, "cannot be used without arguments")
 
-			return nil
+			return err
 		}
 
 		values := strings.Split(args[1], ",")
