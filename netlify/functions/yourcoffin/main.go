@@ -23,6 +23,30 @@ var (
 	gs = googlesheets.New(os.Getenv("GOOGLE_SPREADSHEET"))
 )
 
+type Meters struct {
+	Date          string
+	HotWater      int
+	ColdWater     int
+	ElectricityT1 int
+	ElectricityT2 int
+}
+
+func Rtom(row []interface{}) *Meters {
+	m := &Meters{}
+
+	m.Date = row[0].(string)
+	m.HotWater, _ = strconv.Atoi(row[1].(string))
+	m.ColdWater, _ = strconv.Atoi(row[2].(string))
+	m.ElectricityT1, _ = strconv.Atoi(row[3].(string))
+	m.ElectricityT2, _ = strconv.Atoi(row[4].(string))
+
+	return m
+}
+
+func Mtor(m *Meters) []interface{} {
+	return []interface{}{m.Date, m.HotWater, m.ColdWater, m.ElectricityT1, m.ElectricityT2}
+}
+
 type User struct {
 	ID int `json:"id"`
 }
@@ -156,9 +180,18 @@ func init() {
 			}
 		}
 
-		date := update.Message.Date.Format(metersDateFmt)
+		lastRows, err := gs.LastRow()
+		if err != nil {
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
-		err := gs.AppendRow([]interface{}{date, values[0], values[1], values[2], values[3]})
+			return err
+		}
+
+		previousMeters := Rtom(lastRows)
+
+		newMeters := Rtom([]interface{}{update.Message.Date.Format(metersDateFmt), values[0], values[1], values[2], values[3]})
+
+		err = gs.AppendRow(Mtor(newMeters))
 		if err != nil {
 			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
@@ -168,12 +201,16 @@ func init() {
 		_, err = b.SendMessage(
 			update.Message.Chat.ID,
 			fmt.Sprintf("*meters updated*"+
-				"\n\ndate: %v"+
-				"\nhot water: %v"+
-				"\ncold water: %v"+
-				"\nelectricity (t1): %v"+
-				"\nelectricity (t2): %v",
-				date, values[0], values[1], values[2], values[3],
+				"\n\ndate: %s"+
+				"\nhot water: %d (%+d)"+
+				"\ncold water: %d (%+d)"+
+				"\nelectricity (t1): %d (%+d)"+
+				"\nelectricity (t2): %d (%+d)",
+				newMeters.Date,
+				newMeters.HotWater, newMeters.HotWater-previousMeters.HotWater,
+				newMeters.ColdWater, newMeters.ColdWater-previousMeters.ColdWater,
+				newMeters.ElectricityT1, newMeters.ElectricityT1-previousMeters.ElectricityT1,
+				newMeters.ElectricityT2, newMeters.ElectricityT2-previousMeters.ElectricityT2,
 			),
 		)
 

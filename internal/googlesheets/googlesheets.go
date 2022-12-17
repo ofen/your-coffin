@@ -29,13 +29,13 @@ type Sheet struct {
 	name string
 }
 
-func (s *Sheet) AppendRow(values ...interface{}) error {
+func (s *Sheet) AppendRow(row []interface{}) error {
 	svc, err := newService(context.Background())
 	if err != nil {
 		return err
 	}
 
-	vr := &sheets.ValueRange{Values: [][]interface{}{values}}
+	vr := &sheets.ValueRange{Values: [][]interface{}{row}}
 	_, err = svc.Spreadsheets.Values.Append(s.id, s.name, vr).ValueInputOption("RAW").Do()
 
 	return err
@@ -50,7 +50,7 @@ func (s *Sheet) Rows() (*sheets.ValueRange, error) {
 	return svc.Spreadsheets.Values.Get(s.id, s.name).Do()
 }
 
-func (s *Sheet) LastRow() ([]interface{}, error) {
+func (s *Sheet) LastRow() (row []interface{}, err error) {
 	values, err := s.Rows()
 	if err != nil {
 		return nil, err
