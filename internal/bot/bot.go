@@ -10,6 +10,9 @@ import (
 	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
+// HeaderSecretToken is secret token header configured via https://core.telegram.org/bots/api#setwebhook
+const HeaderSecretToken string = "x-telegram-bot-api-secret-token"
+
 const contentType = "application/json"
 
 type Request interface {

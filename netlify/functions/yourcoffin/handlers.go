@@ -8,6 +8,8 @@ import (
 	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
+const metersDateFmt string = "02.01.2006"
+
 var (
 	statusHandler = func(update *types.Update) error {
 		_, err := b.SendMessage(update.Message.Chat.ID, "ok")

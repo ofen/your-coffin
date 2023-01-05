@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -14,11 +13,10 @@ import (
 	"github.com/ofen/yourcoffin/internal/googlesheets"
 )
 
-const metersDateFmt string = "02.01.2006"
-
 var (
-	b  = bot.New(os.Getenv("BOT_TOKEN"))
-	gs = googlesheets.New(os.Getenv("GOOGLE_SPREADSHEET"))
+	b      = bot.New(os.Getenv("BOT_TOKEN"))
+	gs     = googlesheets.New(os.Getenv("GOOGLE_SPREADSHEET"))
+	secret = os.Getenv("SECRET_TOKEN")
 )
 
 func init() {
@@ -32,56 +30,12 @@ func main() {
 	lambda.Start(handler)
 }
 
-type Meters struct {
-	Date          string
-	HotWater      int
-	ColdWater     int
-	ElectricityT1 int
-	ElectricityT2 int
-}
-
-func Rtom(row []interface{}) *Meters {
-	m := &Meters{}
-
-	m.Date = row[0].(string)
-	m.HotWater, _ = strconv.Atoi(row[1].(string))
-	m.ColdWater, _ = strconv.Atoi(row[2].(string))
-	m.ElectricityT1, _ = strconv.Atoi(row[3].(string))
-	m.ElectricityT2, _ = strconv.Atoi(row[4].(string))
-
-	return m
-}
-
-func Mtor(m *Meters) []interface{} {
-	return []interface{}{m.Date, m.HotWater, m.ColdWater, m.ElectricityT1, m.ElectricityT2}
-}
-
-type User struct {
-	ID int `json:"id"`
-}
-
-func AllowedUsers() []User {
-	users := []User{}
-	date := []byte(os.Getenv("ALLOWED_USERS"))
-	json.Unmarshal(date, &users)
-
-	return users
-}
-
-func IsAllowed(update *types.Update) bool {
-	users := AllowedUsers()
-
-	for _, user := range users {
-		if user.ID == update.Message.Chat.ID {
-			return true
-		}
-	}
-
-	return false
-}
-
 func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	log.Println(r)
+
+	if header := r.Headers[bot.HeaderSecretToken]; header != secret {
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusMethodNotAllowed}, nil
+	}
 
 	if r.HTTPMethod != http.MethodPost {
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusMethodNotAllowed}, nil
