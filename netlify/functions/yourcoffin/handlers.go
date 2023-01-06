@@ -12,7 +12,7 @@ const metersDateFmt string = "02.01.2006"
 
 var (
 	statusHandler = func(update *types.Update) error {
-		_, err := b.SendMessage(update.Message.Chat.ID, "ok")
+		_, err := b.SendMessage(update.Message.Chat.ID, "ok", types.ParseModeMarkdownV2)
 
 		return err
 	}
@@ -20,7 +20,7 @@ var (
 	helpHandler = func(update *types.Update) error {
 		commands, err := b.GetMyCommands()
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
 
 			return err
 		}
@@ -32,7 +32,7 @@ var (
 
 		text = strings.TrimRight(text, "\n")
 
-		_, err = b.SendMessage(update.Message.Chat.ID, text)
+		_, err = b.SendMessage(update.Message.Chat.ID, text, types.ParseModeMarkdownV2)
 
 		return err
 	}
@@ -44,7 +44,7 @@ var (
 
 		v, err := gs.LastRow()
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
 
 			return err
 		}
@@ -60,6 +60,7 @@ var (
 					"\nelectricity (t2): %v",
 				v[:5]...,
 			),
+			types.ParseModeMarkdownV2,
 		)
 
 		return err
@@ -72,14 +73,14 @@ var (
 
 		args := update.Message.Args()
 		if len(args) < 2 {
-			_, err := b.SendMessage(update.Message.Chat.ID, "cannot be used without arguments")
+			_, err := b.SendMessage(update.Message.Chat.ID, "cannot be used without arguments", types.ParseModeMarkdownV2)
 
 			return err
 		}
 
 		values := strings.Split(args[1], ",")
 		if len(values) != 4 {
-			_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument")
+			_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument", types.ParseModeMarkdownV2)
 
 			return err
 		}
@@ -87,7 +88,7 @@ var (
 		for _, v := range values {
 			_, err := strconv.Atoi(v)
 			if err != nil {
-				_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+				_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
 
 				return err
 			}
@@ -95,7 +96,7 @@ var (
 
 		lastRows, err := gs.LastRow()
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
 
 			return err
 		}
@@ -106,7 +107,7 @@ var (
 
 		err = gs.AppendRow(Mtor(newMeters))
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
 
 			return err
 		}
@@ -125,6 +126,7 @@ var (
 				newMeters.ElectricityT1, newMeters.ElectricityT1-previousMeters.ElectricityT1,
 				newMeters.ElectricityT2, newMeters.ElectricityT2-previousMeters.ElectricityT2,
 			),
+			types.ParseModeMarkdownV2,
 		)
 
 		return err

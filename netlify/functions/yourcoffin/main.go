@@ -19,14 +19,12 @@ var (
 	secret = os.Getenv("SECRET_TOKEN")
 )
 
-func init() {
+func main() {
 	b.Command("/status", statusHandler)
 	b.Command("/help", helpHandler)
 	b.Command("/lastmeters", lastmetersHandler)
 	b.Command("/meters", metersHandler)
-}
 
-func main() {
 	lambda.Start(handler)
 }
 

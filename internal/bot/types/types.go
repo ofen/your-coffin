@@ -7,44 +7,53 @@ import (
 	"time"
 )
 
+type HandleFunc func(update *Update) error
+
+type MessageEntityType string
+
 // MessageEntity types https://core.telegram.org/bots/api#messageentity.
 const (
-	MessageEntityBotCommand    string = "bot_command"
-	MessageEntityMention       string = "mention"
-	MessageEntityHashTag       string = "hashtag"
-	MessageEntityCashTag       string = "cashtag"
-	MessageEntityURL           string = "url"
-	MessageEntityEmail         string = "email"
-	MessageEntityPhoneNumber   string = "phone_number"
-	MessageEntityBold          string = "bold"
-	MessageEntityItalic        string = "italic"
-	MessageEntityUnderline     string = "underline"
-	MessageEntityStrikethrough string = "strikethrough"
-	MessageEntitySpoiler       string = "spoiler"
-	MessageEntityCode          string = "code"
-	MessageEntityPre           string = "pre"
-	MessageEntityTextLink      string = "text_link"
-	MessageEntityTextMention   string = "text_mention"
-	MessageEntityCustomEmoji   string = "custom_emoji"
+	MessageEntityTypeBotCommand    MessageEntityType = "bot_command"
+	MessageEntityTypeMention       MessageEntityType = "mention"
+	MessageEntityTypeHashTag       MessageEntityType = "hashtag"
+	MessageEntityTypeCashTag       MessageEntityType = "cashtag"
+	MessageEntityTypeURL           MessageEntityType = "url"
+	MessageEntityTypeEmail         MessageEntityType = "email"
+	MessageEntityTypePhoneNumber   MessageEntityType = "phone_number"
+	MessageEntityTypeBold          MessageEntityType = "bold"
+	MessageEntityTypeItalic        MessageEntityType = "italic"
+	MessageEntityTypeUnderline     MessageEntityType = "underline"
+	MessageEntityTypeStrikethrough MessageEntityType = "strikethrough"
+	MessageEntityTypeSpoiler       MessageEntityType = "spoiler"
+	MessageEntityTypeCode          MessageEntityType = "code"
+	MessageEntityTypePre           MessageEntityType = "pre"
+	MessageEntityTypeTextLink      MessageEntityType = "text_link"
+	MessageEntityTypeTextMention   MessageEntityType = "text_mention"
+	MessageEntityTypeCustomEmoji   MessageEntityType = "custom_emoji"
 )
+
+type ParseMode string
 
 // https://core.telegram.org/bots/api#formatting-options.
 const (
-	ParseModeMarkdownV2 string = "MarkdownV2"
-	ParseModeHTML       string = "HTML"
-	ParseModeMarkdown   string = "Markdown"
+	ParseModeMarkdownV2 ParseMode = "MarkdownV2"
+	ParseModeHTML       ParseMode = "HTML"
+	ParseModeMarkdown   ParseMode = "Markdown"
 )
-
-type SendMessageOption struct {
-	ParseMode string
-}
 
 // SendMessage https://core.telegram.org/bots/api#sendmessage.
 type SendMessage struct {
-	Text      string  `json:"text"`
-	ChatID    int     `json:"chat_id"`
-	ParseMode string  `json:"parse_mode"`
-	Result    Message `json:"result"`
+	Text      string    `json:"text"`
+	ChatID    int       `json:"chat_id"`
+	ParseMode ParseMode `json:"parse_mode"`
+}
+
+func (m *SendMessage) MarshalJSON() ([]byte, error) {
+	if m.ParseMode == ParseModeMarkdownV2 {
+		m.Text = markdownV2Escape(m.Text)
+	}
+
+	return json.Marshal(m)
 }
 
 func (m SendMessage) Method() string {
@@ -113,7 +122,7 @@ func (m *Message) IsBot() bool {
 
 func (m *Message) IsCommand() bool {
 	for _, e := range m.Entities {
-		if e.Type == MessageEntityBotCommand {
+		if e.Type == MessageEntityTypeBotCommand {
 			return true
 		}
 	}
@@ -148,13 +157,13 @@ type User struct {
 
 // MessageEntity https://core.telegram.org/bots/api#messageentity.
 type MessageEntity struct {
-	Offeset       int    `json:"offset"`
-	Length        int    `json:"length"`
-	Type          string `json:"type"`
-	URL           string `json:"url"`
-	User          User   `json:"user"`
-	Language      string `json:"language"`
-	CustomEmojiID string `json:"custom_emoji_id"`
+	Offeset       int               `json:"offset"`
+	Length        int               `json:"length"`
+	Type          MessageEntityType `json:"type"`
+	URL           string            `json:"url"`
+	User          User              `json:"user"`
+	Language      string            `json:"language"`
+	CustomEmojiID string            `json:"custom_emoji_id"`
 }
 
 type Response[T any] struct {
@@ -170,4 +179,29 @@ func (r Response[T]) IsError() error {
 	}
 
 	return fmt.Errorf("%d %s", r.ErrorCode, r.Description)
+}
+
+func markdownV2Escape(s string) string {
+	pairs := []string{
+		"_", "\\_",
+		"*", "*",
+		"[", "\\[",
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)",
+		"~", "\\~",
+		"`", "\\`",
+		">", "\\>",
+		"#", "\\#",
+		"+", "\\+",
+		"-", "\\-",
+		"=", "\\=",
+		"|", "\\|",
+		"{", "\\{",
+		"}", "\\}",
+		".", "\\.",
+		"!", "\\!",
+	}
+
+	return strings.NewReplacer(pairs...).Replace(s)
 }

@@ -24,7 +24,7 @@ type Bot struct {
 	Token    string
 	Client   *http.Client
 	baseurl  string
-	commands map[string]func(*types.Update) error
+	commands map[string]types.HandleFunc
 }
 
 // New is bot constructor
@@ -33,7 +33,7 @@ func New(token string) *Bot {
 		Token:    token,
 		Client:   &http.Client{},
 		baseurl:  "https://api.telegram.org/bot" + token,
-		commands: make(map[string]func(*types.Update) error),
+		commands: make(map[string]types.HandleFunc),
 	}
 }
 
@@ -63,11 +63,11 @@ func (b *Bot) Send(r Request) (json.RawMessage, error) {
 }
 
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
-func (b *Bot) SendMessage(chatID int, text string) (*types.Message, error) {
+func (b *Bot) SendMessage(chatID int, text string, parseMode types.ParseMode) (*types.Message, error) {
 	data, err := b.Send(types.SendMessage{
-		Text:      MarkdownV2Escape(text),
+		Text:      text,
 		ChatID:    chatID,
-		ParseMode: types.ParseModeMarkdownV2,
+		ParseMode: parseMode,
 	})
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (b *Bot) GetMyCommands() ([]*types.BotCommand, error) {
 }
 
 // Command sets bot command.
-func (b *Bot) Command(command string, fn func(update *types.Update) error) {
+func (b *Bot) Command(command string, fn types.HandleFunc) {
 	if !strings.HasPrefix(command, "/") {
 		panic("not a command: " + command)
 	}
@@ -118,29 +118,4 @@ func (b *Bot) HandleCommand(update *types.Update) error {
 	}
 
 	return fn(update)
-}
-
-func MarkdownV2Escape(s string) string {
-	pairs := []string{
-		"_", "\\_",
-		"*", "*",
-		"[", "\\[",
-		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"~", "\\~",
-		"`", "\\`",
-		">", "\\>",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		"=", "\\=",
-		"|", "\\|",
-		"{", "\\{",
-		"}", "\\}",
-		".", "\\.",
-		"!", "\\!",
-	}
-
-	return strings.NewReplacer(pairs...).Replace(s)
 }
