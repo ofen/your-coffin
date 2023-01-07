@@ -48,11 +48,13 @@ type SendMessage struct {
 	ParseMode ParseMode `json:"parse_mode"`
 }
 
-func (m *SendMessage) MarshalJSON() ([]byte, error) {
+func (m SendMessage) MarshalJSON() ([]byte, error) {
 	type Alias SendMessage
 
-	v := (*Alias)(m)
+	v := (Alias)(m)
 	v.Text = escapeText(v.ParseMode, v.Text)
+
+	fmt.Println(v)
 
 	return json.Marshal(v)
 }
