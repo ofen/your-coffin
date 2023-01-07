@@ -41,26 +41,46 @@ var lastmetersHandler = func(update *types.Update) error {
 		return nil
 	}
 
-	v, err := gs.LastRow()
+	v, err := gs.Rows()
 	if err != nil {
 		_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
 
 		return err
 	}
 
-	_, err = b.SendMessage(
-		update.Message.Chat.ID,
-		fmt.Sprintf(
-			"*here is the last meters*"+
-				"\n\ndate: %v"+
-				"\nhot water: %v"+
-				"\ncold water: %v"+
-				"\nelectricity (t1): %v"+
-				"\nelectricity (t2): %v",
-			v[:5]...,
-		),
-		types.ParseModeMarkdownV2,
+	m1 := Rtom(v.Values[len(v.Values)-1])
+	text := fmt.Sprintf("*here is the last meters*"+
+		"\n\ndate: %v"+
+		"\nhot water: %v"+
+		"\ncold water: %v"+
+		"\nelectricity (t1): %v"+
+		"\nelectricity (t2): %v",
+		m1.Date,
+		m1.HotWater,
+		m1.ColdWater,
+		m1.ElectricityT1,
+		m1.ElectricityT2,
 	)
+
+	if len(v.Values) > 1 {
+		m2 := Rtom(v.Values[len(v.Values)-2])
+		subm := m1.Sub(m2)
+
+		text = fmt.Sprintf("*meters updated*"+
+			"\n\ndate: %s"+
+			"\nhot water: %d (%+d)"+
+			"\ncold water: %d (%+d)"+
+			"\nelectricity (t1): %d (%+d)"+
+			"\nelectricity (t2): %d (%+d)",
+			m1.Date,
+			m1.HotWater, subm.HotWater,
+			m1.ColdWater, subm.ColdWater,
+			m1.ElectricityT1, subm.ElectricityT1,
+			m1.ElectricityT2, subm.ElectricityT2,
+		)
+	}
+
+	_, err = b.SendMessage(update.Message.Chat.ID, text, types.ParseModeMarkdownV2)
 
 	return err
 }

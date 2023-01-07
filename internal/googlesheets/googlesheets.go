@@ -18,15 +18,15 @@ func newService(ctx context.Context) (*sheets.Service, error) {
 func New(sheetname string) *Sheet {
 	parts := strings.Split(sheetname, ":")
 	if len(parts) != 2 {
-		panic("should be in form <id>:<sheetname>")
+		return nil
 	}
 
-	return &Sheet{id: parts[0], name: parts[1]}
+	return &Sheet{ID: parts[0], Name: parts[1]}
 }
 
 type Sheet struct {
-	id   string
-	name string
+	ID   string
+	Name string
 }
 
 func (s *Sheet) AppendRow(row []interface{}) error {
@@ -36,7 +36,7 @@ func (s *Sheet) AppendRow(row []interface{}) error {
 	}
 
 	vr := &sheets.ValueRange{Values: [][]interface{}{row}}
-	_, err = svc.Spreadsheets.Values.Append(s.id, s.name, vr).ValueInputOption("RAW").Do()
+	_, err = svc.Spreadsheets.Values.Append(s.ID, s.Name, vr).ValueInputOption("RAW").Do()
 
 	return err
 }
@@ -47,7 +47,7 @@ func (s *Sheet) Rows() (*sheets.ValueRange, error) {
 		return nil, err
 	}
 
-	return svc.Spreadsheets.Values.Get(s.id, s.name).Do()
+	return svc.Spreadsheets.Values.Get(s.ID, s.Name).Do()
 }
 
 func (s *Sheet) LastRow() (row []interface{}, err error) {

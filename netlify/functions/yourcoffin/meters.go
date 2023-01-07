@@ -10,6 +10,16 @@ type Meters struct {
 	ElectricityT2 int
 }
 
+func (t Meters) Sub(m *Meters) *Meters {
+	return &Meters{
+		Date:          t.Date,
+		HotWater:      t.HotWater - m.HotWater,
+		ColdWater:     t.ColdWater - m.ColdWater,
+		ElectricityT1: t.ElectricityT1 - m.ElectricityT1,
+		ElectricityT2: t.ElectricityT2 - m.ElectricityT2,
+	}
+}
+
 func Rtom(row []interface{}) *Meters {
 	m := &Meters{}
 
