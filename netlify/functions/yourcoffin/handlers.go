@@ -49,12 +49,12 @@ var lastmetersHandler = func(update *types.Update) error {
 	}
 
 	m1 := Rtom(v.Values[len(v.Values)-1])
-	text := fmt.Sprintf("*here is the last meters*"+
-		"\n\ndate: %v"+
-		"\nhot water: %v"+
-		"\ncold water: %v"+
-		"\nelectricity (t1): %v"+
-		"\nelectricity (t2): %v",
+	text := fmt.Sprintf("*here is the last meters*\n"+
+		"date: %v\n"+
+		"hot water: %v\n"+
+		"cold water: %v\n"+
+		"electricity (t1): %v\n"+
+		"electricity (t2): %v",
 		m1.Date,
 		m1.HotWater,
 		m1.ColdWater,
@@ -66,12 +66,12 @@ var lastmetersHandler = func(update *types.Update) error {
 		m2 := Rtom(v.Values[len(v.Values)-2])
 		subm := m1.Sub(m2)
 
-		text = fmt.Sprintf("*meters updated*"+
-			"\n\ndate: %s"+
-			"\nhot water: %d (%+d)"+
-			"\ncold water: %d (%+d)"+
-			"\nelectricity (t1): %d (%+d)"+
-			"\nelectricity (t2): %d (%+d)",
+		text = fmt.Sprintf("*here is the last meters*\n"+
+			"date: %s\n"+
+			"hot water: %d (%+d)\n"+
+			"cold water: %d (%+d)\n"+
+			"electricity (t1): %d (%+d)\n"+
+			"electricity (t2): %d (%+d)",
 			m1.Date,
 			m1.HotWater, subm.HotWater,
 			m1.ColdWater, subm.ColdWater,
@@ -133,12 +133,12 @@ var metersHandler = func(update *types.Update) error {
 
 	_, err = b.SendMessage(
 		update.Message.Chat.ID,
-		fmt.Sprintf("*meters updated*"+
-			"\n\ndate: %s"+
-			"\nhot water: %d (%+d)"+
-			"\ncold water: %d (%+d)"+
-			"\nelectricity (t1): %d (%+d)"+
-			"\nelectricity (t2): %d (%+d)",
+		fmt.Sprintf("*meters updated*\n"+
+			"date: %s\n"+
+			"hot water: %d (%+d)\n"+
+			"cold water: %d (%+d)\n"+
+			"electricity (t1): %d (%+d)\n"+
+			"electricity (t2): %d (%+d)",
 			newMeters.Date,
 			newMeters.HotWater, newMeters.HotWater-previousMeters.HotWater,
 			newMeters.ColdWater, newMeters.ColdWater-previousMeters.ColdWater,
