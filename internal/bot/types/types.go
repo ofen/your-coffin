@@ -49,11 +49,14 @@ type SendMessage struct {
 }
 
 func (m *SendMessage) MarshalJSON() ([]byte, error) {
-	if m.ParseMode == ParseModeMarkdownV2 {
-		m.Text = markdownV2Escape(m.Text)
+	type Alias SendMessage
+
+	v := &struct{ *Alias }{Alias: (*Alias)(m)}
+	if v.ParseMode == ParseModeMarkdownV2 {
+		v.Text = markdownV2Escape(v.Text)
 	}
 
-	return json.Marshal(m)
+	return json.Marshal(v)
 }
 
 func (m SendMessage) Method() string {
