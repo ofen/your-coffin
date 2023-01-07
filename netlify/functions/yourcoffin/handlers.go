@@ -72,7 +72,7 @@ var metersHandler = func(update *types.Update) error {
 
 	args := update.Message.Args()
 	if len(args) < 2 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>", types.ParseModeMarkdownV2)
+		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>", "")
 
 		return err
 	}
