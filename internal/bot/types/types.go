@@ -52,9 +52,7 @@ func (m *SendMessage) MarshalJSON() ([]byte, error) {
 	type Alias SendMessage
 
 	v := (*Alias)(m)
-	if v.ParseMode == ParseModeMarkdownV2 {
-		v.Text = markdownV2Escape(v.Text)
-	}
+	v.Text = escapeText(v.ParseMode, v.Text)
 
 	return json.Marshal(v)
 }
@@ -184,26 +182,46 @@ func (r Response[T]) IsError() error {
 	return fmt.Errorf("%d %s", r.ErrorCode, r.Description)
 }
 
-func markdownV2Escape(s string) string {
-	pairs := []string{
-		"_", "\\_",
-		"[", "\\[",
-		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"~", "\\~",
-		"`", "\\`",
-		">", "\\>",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		"=", "\\=",
-		"|", "\\|",
-		"{", "\\{",
-		"}", "\\}",
-		".", "\\.",
-		"!", "\\!",
+func escapeText(parseMode ParseMode, text string) string {
+	var pairs []string
+
+	switch parseMode {
+	case ParseModeHTML:
+		pairs = []string{
+			"<", "&lt;",
+			">", "&gt;",
+			"&", "&amp;",
+		}
+	case ParseModeMarkdown:
+		pairs = []string{
+			"_", "\\_",
+			"*", "\\*",
+			"`", "\\`",
+			"[", "\\[",
+		}
+	case ParseModeMarkdownV2:
+		pairs = []string{
+			"_", "\\_",
+			"[", "\\[",
+			"]", "\\]",
+			"(", "\\(",
+			")", "\\)",
+			"~", "\\~",
+			"`", "\\`",
+			">", "\\>",
+			"#", "\\#",
+			"+", "\\+",
+			"-", "\\-",
+			"=", "\\=",
+			"|", "\\|",
+			"{", "\\{",
+			"}", "\\}",
+			".", "\\.",
+			"!", "\\!",
+		}
+	default:
+		return text
 	}
 
-	return strings.NewReplacer(pairs...).Replace(s)
+	return strings.NewReplacer(pairs...).Replace(text)
 }
