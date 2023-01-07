@@ -54,8 +54,6 @@ func (m SendMessage) MarshalJSON() ([]byte, error) {
 	v := (Alias)(m)
 	v.Text = escapeText(v.ParseMode, v.Text)
 
-	fmt.Println(v)
-
 	return json.Marshal(v)
 }
 
