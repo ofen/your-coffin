@@ -49,14 +49,11 @@ type SendMessage struct {
 }
 
 func (m *SendMessage) MarshalJSON() ([]byte, error) {
-	type Alias SendMessage
-
-	v := &struct{ *Alias }{Alias: (*Alias)(m)}
-	if v.ParseMode == ParseModeMarkdownV2 {
-		v.Text = markdownV2Escape(v.Text)
+	if m.ParseMode == ParseModeMarkdownV2 {
+		m.Text = markdownV2Escape(m.Text)
 	}
 
-	return json.Marshal(v)
+	return json.Marshal(m)
 }
 
 func (m SendMessage) Method() string {
@@ -186,24 +183,23 @@ func (r Response[T]) IsError() error {
 
 func markdownV2Escape(s string) string {
 	pairs := []string{
-		"_", "\\_",
-		"*", "*",
-		"[", "\\[",
-		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"~", "\\~",
-		"`", "\\`",
-		">", "\\>",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		"=", "\\=",
-		"|", "\\|",
-		"{", "\\{",
-		"}", "\\}",
-		".", "\\.",
-		"!", "\\!",
+		"_", "\\\\_",
+		"[", "\\\\[",
+		"]", "\\\\]",
+		"(", "\\\\(",
+		")", "\\\\)",
+		"~", "\\\\~",
+		"`", "\\\\`",
+		">", "\\\\>",
+		"#", "\\\\#",
+		"+", "\\\\+",
+		"-", "\\\\-",
+		"=", "\\\\=",
+		"|", "\\\\|",
+		"{", "\\\\{",
+		"}", "\\\\}",
+		".", "\\\\.",
+		"!", "\\\\!",
 	}
 
 	return strings.NewReplacer(pairs...).Replace(s)
