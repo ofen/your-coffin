@@ -101,7 +101,7 @@ func testHandlerThird(ctx context.Context, update *types.Update) error {
 func testHandlerSecond(ctx context.Context, update *types.Update) error {
 	ctx = context.WithValue(ctx, "test", update.Message.Text)
 	b.SendMessage(update.Message.Chat.ID, "enter something else")
-	b.SetNextHandler(update, func(ctx context.Context, update *types.Update) error {
+	b.SetNextHandler(update, func(_ context.Context, update *types.Update) error {
 		return testHandlerThird(ctx, update)
 	})
 
