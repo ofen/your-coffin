@@ -3,11 +3,11 @@ package main
 import "strconv"
 
 type Meters struct {
-	Date          string
-	HotWater      int
-	ColdWater     int
-	ElectricityT1 int
-	ElectricityT2 int
+	Date          string `json:"date"`
+	HotWater      int    `json:"how_water"`
+	ColdWater     int    `json:"cold_water"`
+	ElectricityT1 int    `json:"electricity_t1"`
+	ElectricityT2 int    `json:"electricity_t2"`
 }
 
 func (t Meters) Sub(m *Meters) *Meters {

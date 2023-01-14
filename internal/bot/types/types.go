@@ -1,13 +1,30 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 )
 
-type HandleFunc func(update *Update) error
+type HandleFunc func(ctx context.Context, u *Update) error
+
+type Option[T any] func(*T)
+
+var (
+	OptionParseModeMarkdownV2 Option[SendMessage] = func(m *SendMessage) {
+		m.ParseMode = ParseModeMarkdownV2
+	}
+
+	OptionParseModeMarkdown Option[SendMessage] = func(m *SendMessage) {
+		m.ParseMode = ParseModeMarkdown
+	}
+
+	OptionParseModeHTML Option[SendMessage] = func(m *SendMessage) {
+		m.ParseMode = ParseModeHTML
+	}
+)
 
 type MessageEntityType string
 
@@ -36,16 +53,16 @@ type ParseMode string
 
 // https://core.telegram.org/bots/api#formatting-options.
 const (
-	ParseModeMarkdownV2 ParseMode = "MarkdownV2"
-	ParseModeHTML       ParseMode = "HTML"
-	ParseModeMarkdown   ParseMode = "Markdown"
+	ParseModeMarkdownV2 string = "MarkdownV2"
+	ParseModeHTML       string = "HTML"
+	ParseModeMarkdown   string = "Markdown"
 )
 
 // SendMessage https://core.telegram.org/bots/api#sendmessage.
 type SendMessage struct {
-	Text      string    `json:"text"`
-	ChatID    int       `json:"chat_id"`
-	ParseMode ParseMode `json:"parse_mode"`
+	Text      string `json:"text"`
+	ChatID    int    `json:"chat_id"`
+	ParseMode string `json:"parse_mode"`
 }
 
 func (m SendMessage) MarshalJSON() ([]byte, error) {
@@ -54,7 +71,7 @@ func (m SendMessage) MarshalJSON() ([]byte, error) {
 	v := (Alias)(m)
 	v.Text = escapeText(v.ParseMode, v.Text)
 
-	return json.Marshal(v)
+	return json.Marshal(&v)
 }
 
 func (m SendMessage) Method() string {
@@ -182,7 +199,7 @@ func (r Response[T]) IsError() error {
 	return fmt.Errorf("%d %s", r.ErrorCode, r.Description)
 }
 
-func escapeText(parseMode ParseMode, text string) string {
+func escapeText(parseMode string, text string) string {
 	var pairs []string
 
 	switch parseMode {

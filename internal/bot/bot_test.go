@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -13,7 +14,7 @@ func TestHandleUpdate(t *testing.T) {
 	}
 
 	b := New("")
-	b.Command("/test", func(update *types.Update) error {
+	b.Command("/test", func(ctx context.Context, update *types.Update) error {
 		t.Log(update.Message.Args())
 
 		return nil
@@ -26,7 +27,7 @@ func TestHandleUpdate(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = b.HandleCommand(u)
+		err = b.HandleUpdate(context.Background(), u)
 		if err != nil {
 			t.Fatal(err)
 		}

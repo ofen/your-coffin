@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/ofen/yourcoffin/internal/bot"
 	"github.com/ofen/yourcoffin/internal/bot/types"
+
 	"github.com/ofen/yourcoffin/internal/googlesheets"
 )
 
@@ -47,7 +49,8 @@ func handler(r events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, 
 		}, nil
 	}
 
-	if err := b.HandleCommand(update); err != nil {
+	ctx := context.Background()
+	if err := b.HandleUpdate(ctx, update); err != nil {
 		log.Println(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,

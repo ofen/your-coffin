@@ -1,25 +1,27 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/ofen/yourcoffin/internal/bot"
 	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
 const metersDateFmt string = "02.01.2006"
 
-var statusHandler = func(update *types.Update) error {
-	_, err := b.SendMessage(update.Message.Chat.ID, "ok", types.ParseModeMarkdownV2)
+func statusHandler(ctx context.Context, update *types.Update) error {
+	_, err := b.SendMessage(update.Message.Chat.ID, "ok")
 
 	return err
 }
 
-var helpHandler = func(update *types.Update) error {
+func helpHandler(ctx context.Context, update *types.Update) error {
 	commands, err := b.GetMyCommands()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
 		return err
 	}
@@ -31,19 +33,19 @@ var helpHandler = func(update *types.Update) error {
 
 	text = strings.TrimRight(text, "\n")
 
-	_, err = b.SendMessage(update.Message.Chat.ID, text, types.ParseModeMarkdownV2)
+	_, err = b.SendMessage(update.Message.Chat.ID, text)
 
 	return err
 }
 
-var lastmetersHandler = func(update *types.Update) error {
+func lastmetersHandler(ctx context.Context, update *types.Update) error {
 	if !IsAllowed(update) {
 		return nil
 	}
 
 	v, err := gs.Rows()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
 		return err
 	}
@@ -80,26 +82,26 @@ var lastmetersHandler = func(update *types.Update) error {
 		)
 	}
 
-	_, err = b.SendMessage(update.Message.Chat.ID, text, types.ParseModeMarkdownV2)
+	_, err = b.SendMessage(update.Message.Chat.ID, text)
 
 	return err
 }
 
-var metersHandler = func(update *types.Update) error {
+func metersHandler(ctx context.Context, update *types.Update) error {
 	if !IsAllowed(update) {
 		return nil
 	}
 
 	args := update.Message.Args()
 	if len(args) < 2 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>", types.ParseModeMarkdownV2)
+		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
 
 		return err
 	}
 
 	values := strings.Split(args[1], ",")
 	if len(values) != 4 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument", types.ParseModeMarkdownV2)
+		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument")
 
 		return err
 	}
@@ -107,7 +109,7 @@ var metersHandler = func(update *types.Update) error {
 	for _, v := range values {
 		_, err := strconv.Atoi(v)
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
 			return err
 		}
@@ -115,21 +117,22 @@ var metersHandler = func(update *types.Update) error {
 
 	lastRows, err := gs.LastRow()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
 		return err
 	}
 
 	previousMeters := Rtom(lastRows)
-
 	newMeters := Rtom([]interface{}{update.Message.Date.Format(metersDateFmt), values[0], values[1], values[2], values[3]})
 
 	err = gs.AppendRow(Mtor(newMeters))
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error(), types.ParseModeMarkdownV2)
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
 
 		return err
 	}
+
+	subMeters := newMeters.Sub(previousMeters)
 
 	_, err = b.SendMessage(
 		update.Message.Chat.ID,
@@ -140,12 +143,11 @@ var metersHandler = func(update *types.Update) error {
 			"electricity (t1): %d (%+d)\n"+
 			"electricity (t2): %d (%+d)",
 			newMeters.Date,
-			newMeters.HotWater, newMeters.HotWater-previousMeters.HotWater,
-			newMeters.ColdWater, newMeters.ColdWater-previousMeters.ColdWater,
-			newMeters.ElectricityT1, newMeters.ElectricityT1-previousMeters.ElectricityT1,
-			newMeters.ElectricityT2, newMeters.ElectricityT2-previousMeters.ElectricityT2,
+			newMeters.HotWater, subMeters.HotWater,
+			newMeters.ColdWater, subMeters.ColdWater,
+			newMeters.ElectricityT1, subMeters.ElectricityT1,
+			newMeters.ElectricityT2, subMeters.ElectricityT2,
 		),
-		types.ParseModeMarkdownV2,
 	)
 
 	return err
