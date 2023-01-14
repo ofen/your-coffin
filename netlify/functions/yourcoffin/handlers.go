@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ofen/yourcoffin/internal/bot"
 	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
@@ -83,6 +82,72 @@ func lastmetersHandler(ctx context.Context, update *types.Update) error {
 	}
 
 	_, err = b.SendMessage(update.Message.Chat.ID, text)
+
+	return err
+}
+
+func metersHandlerV2(ctx context.Context, update *types.Update) error {
+	if !IsAllowed(update) {
+		return nil
+	}
+
+	args := update.Message.Args()
+	if len(args) < 2 {
+		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
+
+		return err
+	}
+
+	values := strings.Split(args[1], ",")
+	if len(values) != 4 {
+		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument")
+
+		return err
+	}
+
+	for _, v := range values {
+		_, err := strconv.Atoi(v)
+		if err != nil {
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
+			return err
+		}
+	}
+
+	lastRows, err := gs.LastRow()
+	if err != nil {
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
+		return err
+	}
+
+	previousMeters := Rtom(lastRows)
+	newMeters := Rtom([]interface{}{update.Message.Date.Format(metersDateFmt), values[0], values[1], values[2], values[3]})
+
+	err = gs.AppendRow(Mtor(newMeters))
+	if err != nil {
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+
+		return err
+	}
+
+	subMeters := newMeters.Sub(previousMeters)
+
+	_, err = b.SendMessage(
+		update.Message.Chat.ID,
+		fmt.Sprintf("*meters updated*\n"+
+			"date: %s\n"+
+			"hot water: %d (%+d)\n"+
+			"cold water: %d (%+d)\n"+
+			"electricity (t1): %d (%+d)\n"+
+			"electricity (t2): %d (%+d)",
+			newMeters.Date,
+			newMeters.HotWater, subMeters.HotWater,
+			newMeters.ColdWater, subMeters.ColdWater,
+			newMeters.ElectricityT1, subMeters.ElectricityT1,
+			newMeters.ElectricityT2, subMeters.ElectricityT2,
+		),
+	)
 
 	return err
 }
