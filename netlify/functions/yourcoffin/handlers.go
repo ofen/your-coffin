@@ -87,6 +87,38 @@ func lastmetersHandler(ctx context.Context, update *types.Update) error {
 	return err
 }
 
+func testHandlerThird(ctx context.Context, update *types.Update) error {
+	v := ctx.Value("test")
+	previousMessage, ok := v.(string)
+	if !ok {
+		return nil
+	}
+
+	b.SendMessage(update.Message.Chat.ID, fmt.Sprintf("you entered: %s and %s", previousMessage, update.Message.Text))
+
+	return nil
+}
+
+func testHandlerSecond(ctx context.Context, update *types.Update) error {
+	b.SendMessage(update.Message.Chat.ID, "enter something else")
+
+	b.SetNextHandler(update, func(ctx context.Context, update *types.Update) error {
+		ctx = context.WithValue(ctx, "test", update.Message.Text)
+
+		return testHandlerThird(ctx, update)
+	})
+
+	return nil
+}
+
+func testHandler(ctx context.Context, update *types.Update) error {
+	b.SendMessage(update.Message.Chat.ID, "enter something")
+
+	b.SetNextHandler(update, testHandlerSecond)
+
+	return nil
+}
+
 func metersHandler(ctx context.Context, update *types.Update) error {
 	if !IsAllowed(update) {
 		return nil

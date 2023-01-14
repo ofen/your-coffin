@@ -41,7 +41,11 @@ func New(token string) *Bot {
 
 func (b *Bot) getNextHandler(update *types.Update) types.HandleFunc {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+
+	defer func() {
+		delete(b.next, update.Message.Chat.ID)
+		b.mu.RUnlock()
+	}()
 
 	return b.next[update.Message.Chat.ID]
 }
