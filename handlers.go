@@ -99,11 +99,9 @@ func testHandlerThird(ctx context.Context, update *types.Update) error {
 }
 
 func testHandlerSecond(ctx context.Context, update *types.Update) error {
+	ctx = context.WithValue(ctx, "test", update.Message.Text)
 	b.SendMessage(update.Message.Chat.ID, "enter something else")
-
 	b.SetNextHandler(update, func(ctx context.Context, update *types.Update) error {
-		ctx = context.WithValue(ctx, "test", update.Message.Text)
-
 		return testHandlerThird(ctx, update)
 	})
 
@@ -112,7 +110,6 @@ func testHandlerSecond(ctx context.Context, update *types.Update) error {
 
 func testHandler(ctx context.Context, update *types.Update) error {
 	b.SendMessage(update.Message.Chat.ID, "enter something")
-
 	b.SetNextHandler(update, testHandlerSecond)
 
 	return nil
