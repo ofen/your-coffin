@@ -93,7 +93,8 @@ func testHandlerFourth(ctx context.Context, update *types.Update) error {
 		return nil
 	}
 
-	b.SendMessage(update.Message.Chat.ID, fmt.Sprintf("you entered: %s", strings.Join(messages, " and ")))
+	messages = append(messages, update.Message.Text)
+	b.SendMessage(update.Message.Chat.ID, fmt.Sprintf("you entered: %q", strings.Join(messages, " and ")))
 
 	return nil
 }
@@ -106,7 +107,6 @@ func testHandlerThird(ctx context.Context, update *types.Update) error {
 	}
 
 	messages = append(messages, update.Message.Text)
-
 	ctx = context.WithValue(ctx, "test", messages)
 	b.SendMessage(update.Message.Chat.ID, "and once more")
 	b.SetNextHandler(update, func(_ context.Context, update *types.Update) error {
@@ -117,7 +117,13 @@ func testHandlerThird(ctx context.Context, update *types.Update) error {
 }
 
 func testHandlerSecond(ctx context.Context, update *types.Update) error {
-	messages := make([]string, 0, 3)
+	v := ctx.Value("test")
+	messages, ok := v.([]string)
+	if !ok {
+		return nil
+	}
+
+	messages = append(messages, update.Message.Text)
 	ctx = context.WithValue(ctx, "test", messages)
 	b.SendMessage(update.Message.Chat.ID, "enter something else")
 	b.SetNextHandler(update, func(_ context.Context, update *types.Update) error {
@@ -128,8 +134,12 @@ func testHandlerSecond(ctx context.Context, update *types.Update) error {
 }
 
 func testHandler(ctx context.Context, update *types.Update) error {
+	messages := make([]string, 0, 3)
+	ctx = context.WithValue(ctx, "test", messages)
 	b.SendMessage(update.Message.Chat.ID, "enter something")
-	b.SetNextHandler(update, testHandlerSecond)
+	b.SetNextHandler(update, func(_ context.Context, update *types.Update) error {
+		return testHandlerSecond(ctx, update)
+	})
 
 	return nil
 }
