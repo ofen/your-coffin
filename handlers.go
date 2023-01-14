@@ -86,20 +86,39 @@ func lastmetersHandler(ctx context.Context, update *types.Update) error {
 	return err
 }
 
-func testHandlerThird(ctx context.Context, update *types.Update) error {
+func testHandlerFourth(ctx context.Context, update *types.Update) error {
 	v := ctx.Value("test")
-	previousMessage, ok := v.(string)
+	messages, ok := v.([]string)
 	if !ok {
 		return nil
 	}
 
-	b.SendMessage(update.Message.Chat.ID, fmt.Sprintf("you entered: %s and %s", previousMessage, update.Message.Text))
+	b.SendMessage(update.Message.Chat.ID, fmt.Sprintf("you entered: %s", strings.Join(messages, " and ")))
+
+	return nil
+}
+
+func testHandlerThird(ctx context.Context, update *types.Update) error {
+	v := ctx.Value("test")
+	messages, ok := v.([]string)
+	if !ok {
+		return nil
+	}
+
+	messages = append(messages, update.Message.Text)
+
+	ctx = context.WithValue(ctx, "test", messages)
+	b.SendMessage(update.Message.Chat.ID, "and once more")
+	b.SetNextHandler(update, func(_ context.Context, update *types.Update) error {
+		return testHandlerFourth(ctx, update)
+	})
 
 	return nil
 }
 
 func testHandlerSecond(ctx context.Context, update *types.Update) error {
-	ctx = context.WithValue(ctx, "test", update.Message.Text)
+	messages := make([]string, 0, 3)
+	ctx = context.WithValue(ctx, "test", messages)
 	b.SendMessage(update.Message.Chat.ID, "enter something else")
 	b.SetNextHandler(update, func(_ context.Context, update *types.Update) error {
 		return testHandlerThird(ctx, update)
