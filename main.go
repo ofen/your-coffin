@@ -23,6 +23,7 @@ func main() {
 	b.Command("/help", helpHandler)
 	b.Command("/lastmeters", lastmetersHandler)
 	b.Command("/meters", metersHandler)
+	b.Command("/test", testHandler)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler)
@@ -35,8 +36,6 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	log.Println(r)
-
 	if h := r.Header.Get(bot.HeaderSecretToken); h != secret {
 		http.Error(w, "", http.StatusForbidden)
 
