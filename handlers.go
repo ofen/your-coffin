@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ofen/yourcoffin/internal/bot"
 	"github.com/ofen/yourcoffin/internal/bot/types"
 )
 
