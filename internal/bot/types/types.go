@@ -67,7 +67,7 @@ type SendMessage struct {
 	Text      string `json:"text"`
 	ChatID    int    `json:"chat_id"`
 	ParseMode string `json:"parse_mode"`
-	Client    Sender
+	Client    Sender `json:"-"`
 }
 
 func (m SendMessage) MarshalJSON() ([]byte, error) {
@@ -109,7 +109,7 @@ type SendMessageResponse struct {
 }
 
 type GetMyCommands struct {
-	Client Sender
+	Client Sender `json:"-"`
 }
 
 func (m *GetMyCommands) Do() (*GetMyCommandsResponse, error) {
