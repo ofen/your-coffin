@@ -113,7 +113,7 @@ type GetMyCommands struct {
 }
 
 func (m *GetMyCommands) Do() (*GetMyCommandsResponse, error) {
-	var v *GetMyCommandsResponse
+	v := &GetMyCommandsResponse{}
 	err := m.Client.Send("getMyCommands", m, v)
 
 	return v, err
