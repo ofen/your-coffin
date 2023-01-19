@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type Sender interface {
+	Send(method string, in interface{}, out interface{}) error
+}
+
 type HandleFunc func(ctx context.Context, u *Update) error
 
 type Option[T any] func(*T)
@@ -63,6 +67,7 @@ type SendMessage struct {
 	Text      string `json:"text"`
 	ChatID    int    `json:"chat_id"`
 	ParseMode string `json:"parse_mode"`
+	Client    Sender
 }
 
 func (m SendMessage) MarshalJSON() ([]byte, error) {
@@ -74,18 +79,44 @@ func (m SendMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&v)
 }
 
-func (m SendMessage) Method() string {
-	return "sendMessage"
+func (m *SendMessage) setParseMode(parseMode string) *SendMessage {
+	m.ParseMode = parseMode
+
+	return m
+}
+
+func (m *SendMessage) ParseModeMarkdownV2() *SendMessage {
+	return m.setParseMode(ParseModeMarkdownV2)
+}
+
+func (m *SendMessage) ParseModeMarkdown() *SendMessage {
+	return m.setParseMode(ParseModeMarkdown)
+}
+
+func (m *SendMessage) ParseModeHTML() *SendMessage {
+	return m.setParseMode(ParseModeHTML)
+}
+
+func (m *SendMessage) Do() (*SendMessageResponse, error) {
+	var v *SendMessageResponse
+	err := m.Client.Send("sendMessage", m, v)
+
+	return v, err
 }
 
 type SendMessageResponse struct {
 	Response[Message]
 }
 
-type GetMyCommands struct{}
+type GetMyCommands struct {
+	Client Sender
+}
 
-func (m GetMyCommands) Method() string {
-	return "getMyCommands"
+func (m *GetMyCommands) Do() (*GetMyCommandsResponse, error) {
+	var v *GetMyCommandsResponse
+	err := m.Client.Send("getMyCommands", m, v)
+
+	return v, err
 }
 
 // GetMyCommandsResponse https://core.telegram.org/bots/api#getmycommands.

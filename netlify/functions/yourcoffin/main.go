@@ -21,7 +21,7 @@ var (
 	b      = bot.New(os.Getenv("BOT_TOKEN"))
 	gs     = googlesheets.New(os.Getenv("GOOGLE_SPREADSHEET"))
 	secret = os.Getenv("SECRET_TOKEN")
-	redis  = db.New(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), time.Minute*5)
+	cache  = db.New(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), time.Minute*5)
 )
 
 func main() {

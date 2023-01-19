@@ -53,29 +53,20 @@ func (b *Bot) SetNextHandler(update *types.Update, next types.HandleFunc) {
 	b.next[update.Message.Chat.ID] = next
 }
 
-func (b *Bot) Send(method string, payload interface{}) (json.RawMessage, error) {
-	data, err := json.Marshal(payload)
+func (b *Bot) Send(method string, in interface{}, out interface{}) error {
+	data, err := json.Marshal(in)
 	if err != nil {
-		return nil, fmt.Errorf("bot: %w", err)
+		return fmt.Errorf("bot: %w", err)
 	}
 
 	resp, err := b.Client.Post(b.baseurl+"/"+method, contentType, bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("bot: %w", err)
+		return fmt.Errorf("bot: %w", err)
 	}
 
 	defer resp.Body.Close()
 
-	v := &types.Response[json.RawMessage]{}
-	if err = json.NewDecoder(resp.Body).Decode(v); err != nil {
-		return nil, err
-	}
-
-	if err = v.IsError(); err != nil {
-		return nil, err
-	}
-
-	return v.Result, nil
+	return json.NewDecoder(resp.Body).Decode(out)
 }
 
 // Command sets bot command.
@@ -111,32 +102,15 @@ func (b *Bot) HandleUpdate(ctx context.Context, u *types.Update) error {
 }
 
 // SendMessage sends message https://core.telegram.org/bots/api#sendmessage.
-func (b *Bot) SendMessage(chatID int, text string, opts ...types.Option[types.SendMessage]) (*types.Message, error) {
-	p := &types.SendMessage{
+func (b *Bot) SendMessage(chatID int, text string) *types.SendMessage {
+	return &types.SendMessage{
 		Text:   text,
 		ChatID: chatID,
+		Client: b,
 	}
-
-	for _, opt := range opts {
-		opt(p)
-	}
-
-	data, err := b.Send("sendMessage", p)
-	if err != nil {
-		return nil, err
-	}
-
-	v := &types.Message{}
-	return v, json.Unmarshal(data, v)
 }
 
 // GetMyCommands https://core.telegram.org/bots/api#getmycommands.
-func (b *Bot) GetMyCommands() ([]*types.BotCommand, error) {
-	data, err := b.Send("getMyCommands", types.GetMyCommands{})
-	if err != nil {
-		return nil, err
-	}
-
-	v := []*types.BotCommand{}
-	return v, json.Unmarshal(data, &v)
+func (b *Bot) GetMyCommands() *types.GetMyCommands {
+	return &types.GetMyCommands{Client: b}
 }

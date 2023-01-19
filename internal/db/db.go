@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/go-redis/redis/v9"
@@ -25,11 +26,21 @@ type DB struct {
 }
 
 func (db *DB) Set(ctx context.Context, key string, value interface{}) error {
-	_, err := db.Client.Conn().Set(ctx, key, value, db.ttl).Result()
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Client.Conn().Set(ctx, key, data, db.ttl).Result()
 
 	return err
 }
 
-func (db *DB) Get(ctx context.Context, key string) (interface{}, error) {
-	return db.Client.Get(ctx, key).Result()
+func (db *DB) Get(ctx context.Context, key string, value interface{}) error {
+	data, err := db.Client.Get(ctx, key).Bytes()
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, &value)
 }

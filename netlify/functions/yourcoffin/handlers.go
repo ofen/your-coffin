@@ -12,27 +12,27 @@ import (
 const metersDateFmt string = "02.01.2006"
 
 func statusHandler(ctx context.Context, update *types.Update) error {
-	_, err := b.SendMessage(update.Message.Chat.ID, "ok")
+	_, err := b.SendMessage(update.Message.Chat.ID, "ok").Do()
 
 	return err
 }
 
 func helpHandler(ctx context.Context, update *types.Update) error {
-	commands, err := b.GetMyCommands()
+	resp, err := b.GetMyCommands().Do()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 		return err
 	}
 
 	var text string
-	for _, command := range commands {
+	for _, command := range resp.Result {
 		text += fmt.Sprintf("/%s - %s\n", command.Command, command.Description)
 	}
 
 	text = strings.TrimRight(text, "\n")
 
-	_, err = b.SendMessage(update.Message.Chat.ID, text)
+	_, err = b.SendMessage(update.Message.Chat.ID, text).Do()
 
 	return err
 }
@@ -44,7 +44,7 @@ func lastmetersHandler(ctx context.Context, update *types.Update) error {
 
 	v, err := gs.Rows()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 		return err
 	}
@@ -81,7 +81,7 @@ func lastmetersHandler(ctx context.Context, update *types.Update) error {
 		)
 	}
 
-	_, err = b.SendMessage(update.Message.Chat.ID, text)
+	_, err = b.SendMessage(update.Message.Chat.ID, text).ParseModeMarkdownV2().Do()
 
 	return err
 }
@@ -93,14 +93,14 @@ func metersHandlerV2(ctx context.Context, update *types.Update) error {
 
 	args := update.Message.Args()
 	if len(args) < 2 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
+		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>").Do()
 
 		return err
 	}
 
 	values := strings.Split(args[1], ",")
 	if len(values) != 4 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument")
+		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument").Do()
 
 		return err
 	}
@@ -108,7 +108,7 @@ func metersHandlerV2(ctx context.Context, update *types.Update) error {
 	for _, v := range values {
 		_, err := strconv.Atoi(v)
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 			return err
 		}
@@ -116,7 +116,7 @@ func metersHandlerV2(ctx context.Context, update *types.Update) error {
 
 	lastRows, err := gs.LastRow()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 		return err
 	}
@@ -126,7 +126,7 @@ func metersHandlerV2(ctx context.Context, update *types.Update) error {
 
 	err = gs.AppendRow(Mtor(newMeters))
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 		return err
 	}
@@ -147,7 +147,7 @@ func metersHandlerV2(ctx context.Context, update *types.Update) error {
 			newMeters.ElectricityT1, subMeters.ElectricityT1,
 			newMeters.ElectricityT2, subMeters.ElectricityT2,
 		),
-	)
+	).Do()
 
 	return err
 }
@@ -159,14 +159,14 @@ func metersHandler(ctx context.Context, update *types.Update) error {
 
 	args := update.Message.Args()
 	if len(args) < 2 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
+		_, err := b.SendMessage(update.Message.Chat.ID, "usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>").Do()
 
 		return err
 	}
 
 	values := strings.Split(args[1], ",")
 	if len(values) != 4 {
-		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument")
+		_, err := b.SendMessage(update.Message.Chat.ID, "invalid argument").Do()
 
 		return err
 	}
@@ -174,7 +174,7 @@ func metersHandler(ctx context.Context, update *types.Update) error {
 	for _, v := range values {
 		_, err := strconv.Atoi(v)
 		if err != nil {
-			_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+			_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 			return err
 		}
@@ -182,7 +182,7 @@ func metersHandler(ctx context.Context, update *types.Update) error {
 
 	lastRows, err := gs.LastRow()
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 		return err
 	}
@@ -192,7 +192,7 @@ func metersHandler(ctx context.Context, update *types.Update) error {
 
 	err = gs.AppendRow(Mtor(newMeters))
 	if err != nil {
-		_, err = b.SendMessage(update.Message.Chat.ID, err.Error())
+		_, err = b.SendMessage(update.Message.Chat.ID, err.Error()).Do()
 
 		return err
 	}
@@ -213,7 +213,7 @@ func metersHandler(ctx context.Context, update *types.Update) error {
 			newMeters.ElectricityT1, subMeters.ElectricityT1,
 			newMeters.ElectricityT2, subMeters.ElectricityT2,
 		),
-	)
+	).ParseModeMarkdownV2().Do()
 
 	return err
 }
