@@ -41,12 +41,8 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		log.Println(lc)
 	}
 
-	if header := event.Headers[bot.HeaderSecretToken]; header != secret {
-		return &events.APIGatewayProxyResponse{StatusCode: http.StatusMethodNotAllowed}, nil
-	}
-
-	if event.HTTPMethod != http.MethodPost {
-		return &events.APIGatewayProxyResponse{StatusCode: http.StatusMethodNotAllowed}, nil
+	if header := event.Headers[bot.HeaderSecretToken]; header != secret && event.HTTPMethod != http.MethodPost {
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusNotFound}, nil
 	}
 
 	update := &types.Update{}
