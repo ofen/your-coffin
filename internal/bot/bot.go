@@ -53,7 +53,7 @@ func (b *Bot) SetNextHandler(update *types.Update, next types.HandleFunc) {
 	b.next[update.Message.Chat.ID] = next
 }
 
-func (b *Bot) Send(method string, in interface{}, out interface{}) error {
+func (b *Bot) Do(method string, in interface{}, out interface{}) error {
 	data, err := json.Marshal(in)
 	if err != nil {
 		return fmt.Errorf("bot: %w", err)

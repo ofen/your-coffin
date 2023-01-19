@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-type Sender interface {
-	Send(method string, in interface{}, out interface{}) error
+type Doer interface {
+	Do(method string, in interface{}, out interface{}) error
 }
 
 type HandleFunc func(ctx context.Context, u *Update) error
@@ -64,10 +64,10 @@ const (
 
 // SendMessage https://core.telegram.org/bots/api#sendmessage.
 type SendMessage struct {
+	Request
 	Text      string `json:"text"`
 	ChatID    int    `json:"chat_id"`
 	ParseMode string `json:"parse_mode"`
-	Client    Sender `json:"-"`
 }
 
 func (m SendMessage) MarshalJSON() ([]byte, error) {
@@ -98,8 +98,8 @@ func (m *SendMessage) ParseModeHTML() *SendMessage {
 }
 
 func (m *SendMessage) Do() (*SendMessageResponse, error) {
-	var v *SendMessageResponse
-	err := m.Client.Send("sendMessage", m, v)
+	v := &SendMessageResponse{}
+	err := m.Client.Do("sendMessage", m, v)
 
 	return v, err
 }
@@ -109,12 +109,12 @@ type SendMessageResponse struct {
 }
 
 type GetMyCommands struct {
-	Client Sender `json:"-"`
+	Request
 }
 
 func (m *GetMyCommands) Do() (*GetMyCommandsResponse, error) {
 	v := &GetMyCommandsResponse{}
-	err := m.Client.Send("getMyCommands", m, v)
+	err := m.Client.Do("getMyCommands", m, v)
 
 	return v, err
 }
@@ -213,6 +213,10 @@ type MessageEntity struct {
 	User          User              `json:"user"`
 	Language      string            `json:"language"`
 	CustomEmojiID string            `json:"custom_emoji_id"`
+}
+
+type Request struct {
+	Client Doer `json:"-"`
 }
 
 type Response[T any] struct {
