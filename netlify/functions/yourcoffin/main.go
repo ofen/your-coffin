@@ -37,7 +37,7 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 	log.Println(event)
 
 	lc, ok := lambdacontext.FromContext(ctx)
-	if !ok {
+	if ok {
 		log.Println(lc)
 	}
 
