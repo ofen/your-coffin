@@ -64,7 +64,9 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 }
 
 func sendMessage(ctx context.Context, chatID int64, text string, opts ...telegram.MethodOption) error {
-	_, err := bot.SendMessage(ctx, telegram.SetChatID(chatID), telegram.SetText(text))
+	opts = append(opts, telegram.SetChatID(chatID), telegram.SetText(text))
+
+	_, err := bot.SendMessage(ctx, opts...)
 
 	return err
 }
