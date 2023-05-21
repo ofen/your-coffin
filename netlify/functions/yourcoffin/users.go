@@ -4,26 +4,26 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/ofen/yourcoffin/internal/bot/types"
+	"github.com/nasermirzaei89/telegram"
 )
 
-type User struct {
+type user struct {
 	ID int `json:"id"`
 }
 
-func AllowedUsers() []User {
-	users := []User{}
+func allowedUsers() []user {
+	users := []user{}
 	date := []byte(os.Getenv("ALLOWED_USERS"))
 	json.Unmarshal(date, &users)
 
 	return users
 }
 
-func IsAllowed(update *types.Update) bool {
-	users := AllowedUsers()
+func isAllowed(update *telegram.Update) bool {
+	users := allowedUsers()
 
 	for _, user := range users {
-		if user.ID == update.Message.Chat.ID {
+		if user.ID == int(update.Message.From.ID) {
 			return true
 		}
 	}

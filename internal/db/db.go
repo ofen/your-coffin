@@ -31,7 +31,7 @@ func (db *DB) Set(ctx context.Context, key string, value interface{}) error {
 		return err
 	}
 
-	_, err = db.Client.Conn().Set(ctx, key, data, db.ttl).Result()
+	_, err = db.Client.Set(ctx, key, data, db.ttl).Result()
 
 	return err
 }

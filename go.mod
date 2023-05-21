@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/aws/aws-lambda-go v1.35.0
 	github.com/go-redis/redis/v9 v9.0.0-rc.2
+	github.com/nasermirzaei89/telegram v0.0.0-20230330143758-fa397411f757
 	google.golang.org/api v0.61.0
 )
 
