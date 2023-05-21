@@ -92,11 +92,9 @@ func sendMessage(ctx context.Context, chatID int64, text string) error {
 func sendMessageMarkdownV2(ctx context.Context, chatID int64, text string) error {
 	opts := []telegram.MethodOption{
 		telegram.SetChatID(chatID),
-		telegram.SetText(text),
+		telegram.SetText(escapeText(parseModeMarkdownV2, text)),
 		telegram.SetParseMode(parseModeMarkdownV2),
 	}
-
-	text = escapeText(parseModeMarkdownV2, text)
 
 	return _sendMessage(ctx, opts...)
 }
@@ -273,19 +271,20 @@ func metersHandler(ctx context.Context, update *telegram.Update) error {
 func escapeText(parseMode string, text string) string {
 	var replacer *strings.Replacer
 
-	if parseMode == parseModeHTML {
+	switch parseMode {
+	case parseModeHTML:
 		replacer = strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;")
-	} else if parseMode == parseModeMarkdown {
+	case parseModeMarkdown:
 		replacer = strings.NewReplacer("_", "\\_", "*", "\\*", "`", "\\`", "[", "\\[")
-	} else if parseMode == parseModeMarkdownV2 {
+	case parseModeMarkdownV2:
 		replacer = strings.NewReplacer(
 			"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
 			"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
 			"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
 			"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
 		)
-	} else {
-		return ""
+	default:
+		return text
 	}
 
 	return replacer.Replace(text)
