@@ -19,6 +19,10 @@ const (
 	metersDateFmt string = "02.01.2006"
 	// headerSecretToken is secret token header configured via https://core.telegram.org/bots/api#setwebhook
 	headerSecretToken = "x-telegram-bot-api-secret-token"
+
+	parseModeHTML       = "HTML"
+	parseModeMarkdown   = "Markdown"
+	parseModeMarkdownV2 = "MarkdownV2"
 )
 
 // handler is main entrypoint for request.
@@ -63,9 +67,7 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 	return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 }
 
-func sendMessage(ctx context.Context, chatID int64, text string, opts ...telegram.MethodOption) error {
-	opts = append(opts, telegram.SetChatID(chatID), telegram.SetText(text))
-
+func _sendMessage(ctx context.Context, opts ...telegram.MethodOption) error {
 	resp, err := bot.SendMessage(ctx, opts...)
 	if err != nil {
 		return err
@@ -76,6 +78,27 @@ func sendMessage(ctx context.Context, chatID int64, text string, opts ...telegra
 	}
 
 	return nil
+}
+
+func sendMessage(ctx context.Context, chatID int64, text string) error {
+	opts := []telegram.MethodOption{
+		telegram.SetChatID(chatID),
+		telegram.SetText(text),
+	}
+
+	return _sendMessage(ctx, opts...)
+}
+
+func sendMessageMarkdownV2(ctx context.Context, chatID int64, text string) error {
+	opts := []telegram.MethodOption{
+		telegram.SetChatID(chatID),
+		telegram.SetText(text),
+		telegram.SetParseMode(parseModeMarkdownV2),
+	}
+
+	text = escapeText(parseModeMarkdownV2, text)
+
+	return _sendMessage(ctx, opts...)
 }
 
 func statusHandler(ctx context.Context, update *telegram.Update) error {
@@ -140,7 +163,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 		)
 	}
 
-	return sendMessage(ctx, update.Message.From.ID, text, telegram.SetParseMode("MarkdownV2"))
+	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
 }
 
 func metersHandlerV2(ctx context.Context, update *telegram.Update) error {
@@ -192,7 +215,7 @@ func metersHandlerV2(ctx context.Context, update *telegram.Update) error {
 		newMeters.ElectricityT2, subMeters.ElectricityT2,
 	)
 
-	return sendMessage(ctx, update.Message.From.ID, text, telegram.SetParseMode("MarkdownV2"))
+	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
 }
 
 func metersHandler(ctx context.Context, update *telegram.Update) error {
@@ -244,5 +267,26 @@ func metersHandler(ctx context.Context, update *telegram.Update) error {
 		newMeters.ElectricityT2, subMeters.ElectricityT2,
 	)
 
-	return sendMessage(ctx, update.Message.From.ID, text, telegram.SetParseMode("MarkdownV2"))
+	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
+}
+
+func escapeText(parseMode string, text string) string {
+	var replacer *strings.Replacer
+
+	if parseMode == parseModeHTML {
+		replacer = strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;")
+	} else if parseMode == parseModeMarkdown {
+		replacer = strings.NewReplacer("_", "\\_", "*", "\\*", "`", "\\`", "[", "\\[")
+	} else if parseMode == parseModeMarkdownV2 {
+		replacer = strings.NewReplacer(
+			"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
+			"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
+			"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
+			"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
+		)
+	} else {
+		return ""
+	}
+
+	return replacer.Replace(text)
 }
