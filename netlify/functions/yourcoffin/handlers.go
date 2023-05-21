@@ -271,15 +271,37 @@ func escapeText(parseMode string, text string) string {
 
 	switch parseMode {
 	case parseModeHTML:
-		replacer = strings.NewReplacer("<", "&lt;", ">", "&gt;", "&", "&amp;")
+		replacer = strings.NewReplacer(
+			"<", "&lt;",
+			">", "&gt;",
+			"&", "&amp;",
+		)
 	case parseModeMarkdown:
-		replacer = strings.NewReplacer("_", "\\_", "*", "\\*", "`", "\\`", "[", "\\[")
+		replacer = strings.NewReplacer(
+			"_", "\\_",
+			"*", "\\*",
+			"`", "\\`",
+			"[", "\\[",
+		)
 	case parseModeMarkdownV2:
 		replacer = strings.NewReplacer(
-			"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]", "(",
-			"\\(", ")", "\\)", "~", "\\~", "`", "\\`", ">", "\\>",
-			"#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|",
-			"\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!",
+			"_", "\\_",
+			"[", "\\[",
+			"]", "\\]",
+			"(", "\\(",
+			")", "\\)",
+			"~", "\\~",
+			"`", "\\`",
+			">", "\\>",
+			"#", "\\#",
+			"+", "\\+",
+			"-", "\\-",
+			"=", "\\=",
+			"|", "\\|",
+			"{", "\\{",
+			"}", "\\}",
+			".", "\\.",
+			"!", "\\!",
 		)
 	default:
 		return text
