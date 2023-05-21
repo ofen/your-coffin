@@ -128,7 +128,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 	}
 
 	m1 := Rtom(v.Values[len(v.Values)-1])
-	text := fmt.Sprintf("*here is the last meters*\n"+
+	text := fmt.Sprintf("**here is the last meters**\n"+
 		"date: %v\n"+
 		"hot water: %v\n"+
 		"cold water: %v\n"+
