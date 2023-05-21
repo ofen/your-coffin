@@ -56,8 +56,6 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		err = lastmetersHandler(ctx, update)
 	case "/meters":
 		err = metersHandler(ctx, update)
-	default:
-		err = helpHandler(ctx, update)
 	}
 
 	if err != nil {
@@ -147,7 +145,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 		m2 := Rtom(v.Values[len(v.Values)-2])
 		subm := m1.Sub(m2)
 
-		text = fmt.Sprintf("*here is the last meters*\n"+
+		text = fmt.Sprintf("**here is the last meters**\n"+
 			"date: %s\n"+
 			"hot water: %d (%+d)\n"+
 			"cold water: %d (%+d)\n"+
@@ -200,7 +198,7 @@ func metersHandlerV2(ctx context.Context, update *telegram.Update) error {
 
 	subMeters := newMeters.Sub(previousMeters)
 
-	text := fmt.Sprintf("*meters updated*\n"+
+	text := fmt.Sprintf("**meters updated**\n"+
 		"date: %s\n"+
 		"hot water: %d (%+d)\n"+
 		"cold water: %d (%+d)\n"+
