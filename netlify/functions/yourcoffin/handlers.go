@@ -128,7 +128,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 	}
 
 	m1 := Rtom(v.Values[len(v.Values)-1])
-	text := fmt.Sprintf("**here is the last meters**\n"+
+	text := fmt.Sprintf("*here is the last meters*\n"+
 		"date: %v\n"+
 		"hot water: %v\n"+
 		"cold water: %v\n"+
@@ -145,7 +145,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 		m2 := Rtom(v.Values[len(v.Values)-2])
 		subm := m1.Sub(m2)
 
-		text = fmt.Sprintf("**here is the last meters**\n"+
+		text = fmt.Sprintf("*here is the last meters*\n"+
 			"date: %s\n"+
 			"hot water: %d (%+d)\n"+
 			"cold water: %d (%+d)\n"+
@@ -198,7 +198,7 @@ func metersHandlerV2(ctx context.Context, update *telegram.Update) error {
 
 	subMeters := newMeters.Sub(previousMeters)
 
-	text := fmt.Sprintf("**meters updated**\n"+
+	text := fmt.Sprintf("*meters updated*\n"+
 		"date: %s\n"+
 		"hot water: %d (%+d)\n"+
 		"cold water: %d (%+d)\n"+
