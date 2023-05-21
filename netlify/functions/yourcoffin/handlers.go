@@ -90,8 +90,8 @@ func sendMessage(ctx context.Context, chatID int64, text string) error {
 func sendMessageMarkdownV2(ctx context.Context, chatID int64, text string) error {
 	opts := []telegram.MethodOption{
 		telegram.SetChatID(chatID),
-		telegram.SetText(escapeText(parseModeMarkdownV2, text)),
-		telegram.SetParseMode(parseModeMarkdownV2),
+		telegram.SetText(escapeText(parseModeMarkdown, text)),
+		telegram.SetParseMode(parseModeMarkdown),
 	}
 
 	return _sendMessage(ctx, opts...)
