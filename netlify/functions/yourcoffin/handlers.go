@@ -277,10 +277,5 @@ func (u Update) command() string {
 }
 
 func (u Update) args() []string {
-	fields := strings.Fields(*u.Message.Text)
-	if len(fields) > 0 {
-		return fields[1:]
-	}
-
-	return []string{}
+	return strings.Fields(*u.Message.Text)
 }
