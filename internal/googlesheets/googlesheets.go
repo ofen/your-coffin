@@ -2,6 +2,7 @@ package googlesheets
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -32,22 +33,28 @@ type Sheet struct {
 func (s *Sheet) AppendRow(row []interface{}) error {
 	svc, err := newService(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("googlesheets: %w", err)
 	}
 
-	vr := &sheets.ValueRange{Values: [][]interface{}{row}}
-	_, err = svc.Spreadsheets.Values.Append(s.ID, s.Name, vr).ValueInputOption("RAW").Do()
+	if _, err = svc.Spreadsheets.Values.Append(s.ID, s.Name, &sheets.ValueRange{Values: [][]interface{}{row}}).ValueInputOption("RAW").Do(); err != nil {
+		return fmt.Errorf("googlesheets: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (s *Sheet) Rows() (*sheets.ValueRange, error) {
 	svc, err := newService(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("googlesheets: %w", err)
 	}
 
-	return svc.Spreadsheets.Values.Get(s.ID, s.Name).Do()
+	res, err := svc.Spreadsheets.Values.Get(s.ID, s.Name).Do()
+	if err != nil {
+		return nil, fmt.Errorf("googlesheets: %w", err)
+	}
+
+	return res, nil
 }
 
 func (s *Sheet) LastRow() (row []interface{}, err error) {

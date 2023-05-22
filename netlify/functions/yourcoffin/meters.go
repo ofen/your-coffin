@@ -10,17 +10,21 @@ type Meters struct {
 	ElectricityT2 int    `json:"electricity_t2"`
 }
 
-func (t Meters) Sub(m *Meters) *Meters {
+func (m Meters) Sub(meters *Meters) *Meters {
 	return &Meters{
-		Date:          t.Date,
-		HotWater:      t.HotWater - m.HotWater,
-		ColdWater:     t.ColdWater - m.ColdWater,
-		ElectricityT1: t.ElectricityT1 - m.ElectricityT1,
-		ElectricityT2: t.ElectricityT2 - m.ElectricityT2,
+		Date:          m.Date,
+		HotWater:      m.HotWater - meters.HotWater,
+		ColdWater:     m.ColdWater - meters.ColdWater,
+		ElectricityT1: m.ElectricityT1 - meters.ElectricityT1,
+		ElectricityT2: m.ElectricityT2 - meters.ElectricityT2,
 	}
 }
 
-func Rtom(row []interface{}) *Meters {
+func (m Meters) ToRow() []interface{} {
+	return []interface{}{m.Date, m.HotWater, m.ColdWater, m.ElectricityT1, m.ElectricityT2}
+}
+
+func RowToMeters(row []interface{}) *Meters {
 	m := &Meters{}
 
 	m.Date = row[0].(string)
@@ -30,8 +34,4 @@ func Rtom(row []interface{}) *Meters {
 	m.ElectricityT2, _ = strconv.Atoi(row[4].(string))
 
 	return m
-}
-
-func Mtor(m *Meters) []interface{} {
-	return []interface{}{m.Date, m.HotWater, m.ColdWater, m.ElectricityT1, m.ElectricityT2}
 }

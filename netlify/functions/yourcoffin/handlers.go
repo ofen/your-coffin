@@ -127,7 +127,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 		return err
 	}
 
-	m1 := Rtom(v.Values[len(v.Values)-1])
+	m1 := RowToMeters(v.Values[len(v.Values)-1])
 	text := fmt.Sprintf("*here is the last meters*\n"+
 		"date: %v\n"+
 		"hot water: %v\n"+
@@ -142,7 +142,7 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 	)
 
 	if len(v.Values) > 1 {
-		m2 := Rtom(v.Values[len(v.Values)-2])
+		m2 := RowToMeters(v.Values[len(v.Values)-2])
 		subm := m1.Sub(m2)
 
 		text = fmt.Sprintf("*here is the last meters*\n"+
@@ -162,62 +162,10 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
 }
 
-func metersHandlerV2(ctx context.Context, update *telegram.Update) error {
-	if !isAllowed(update) {
-		return nil
-	}
-
-	args := strings.Fields(*update.Message.Text)
-	if len(args) < 2 {
-		return fmt.Errorf("usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
-	}
-
-	values := strings.Split(args[1], ",")
-	if len(values) != 4 {
-		return fmt.Errorf("invalid argument")
-	}
-
-	for _, v := range values {
-		if _, err := strconv.Atoi(v); err != nil {
-			return err
-		}
-	}
-
-	lastRows, err := gs.LastRow()
-	if err != nil {
-		return err
-	}
-
-	previousMeters := Rtom(lastRows)
-	newMeters := Rtom([]interface{}{time.Unix(int64(update.Message.Date), 0).Format(metersDateFmt), values[0], values[1], values[2], values[3]})
-
-	err = gs.AppendRow(Mtor(newMeters))
-	if err != nil {
-		return err
-	}
-
-	subMeters := newMeters.Sub(previousMeters)
-
-	text := fmt.Sprintf("*meters updated*\n"+
-		"date: %s\n"+
-		"hot water: %d (%+d)\n"+
-		"cold water: %d (%+d)\n"+
-		"electricity (t1): %d (%+d)\n"+
-		"electricity (t2): %d (%+d)",
-		newMeters.Date,
-		newMeters.HotWater, subMeters.HotWater,
-		newMeters.ColdWater, subMeters.ColdWater,
-		newMeters.ElectricityT1, subMeters.ElectricityT1,
-		newMeters.ElectricityT2, subMeters.ElectricityT2,
-	)
-
-	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
-}
-
 func metersHandler(ctx context.Context, update *telegram.Update) error {
-	if !isAllowed(update) {
-		return nil
-	}
+	// if !isAllowed(update) {
+	// 	return nil
+	// }
 
 	args := strings.Fields(*update.Message.Text)
 	if len(args) < 2 {
@@ -240,16 +188,21 @@ func metersHandler(ctx context.Context, update *telegram.Update) error {
 		return err
 	}
 
-	previousMeters := Rtom(lastRows)
-	newMeters := Rtom([]interface{}{time.Unix(int64(update.Message.Date), 0).Format(metersDateFmt), values[0], values[1], values[2], values[3]})
+	previousMeters := RowToMeters(lastRows)
+	newMeters := RowToMeters([]interface{}{
+		time.Unix(int64(update.Message.Date), 0).Format(metersDateFmt),
+		values[0],
+		values[1],
+		values[2],
+		values[3],
+	})
 
-	err = gs.AppendRow(Mtor(newMeters))
+	err = gs.AppendRow(newMeters.ToRow())
 	if err != nil {
 		return err
 	}
 
-	subMeters := newMeters.Sub(previousMeters)
-
+	subm := newMeters.Sub(previousMeters)
 	text := fmt.Sprintf("*meters updated*\n"+
 		"date: %s\n"+
 		"hot water: %d (%+d)\n"+
@@ -257,10 +210,10 @@ func metersHandler(ctx context.Context, update *telegram.Update) error {
 		"electricity (t1): %d (%+d)\n"+
 		"electricity (t2): %d (%+d)",
 		newMeters.Date,
-		newMeters.HotWater, subMeters.HotWater,
-		newMeters.ColdWater, subMeters.ColdWater,
-		newMeters.ElectricityT1, subMeters.ElectricityT1,
-		newMeters.ElectricityT2, subMeters.ElectricityT2,
+		newMeters.HotWater, subm.HotWater,
+		newMeters.ColdWater, subm.ColdWater,
+		newMeters.ElectricityT1, subm.ElectricityT1,
+		newMeters.ElectricityT2, subm.ElectricityT2,
 	)
 
 	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
