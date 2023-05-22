@@ -59,7 +59,9 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 	}
 
 	if err != nil {
-		_ = sendMessage(ctx, update.Message.From.ID, err.Error())
+		if err = sendMessage(ctx, update.Message.From.ID, err.Error()); err != nil {
+			log.Println(err)
+		}
 	}
 
 	return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
