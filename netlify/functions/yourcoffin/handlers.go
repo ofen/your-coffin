@@ -163,9 +163,9 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 }
 
 func metersHandler(ctx context.Context, update *telegram.Update) error {
-	// if !isAllowed(update) {
-	// 	return nil
-	// }
+	if !isAllowed(update) {
+		return nil
+	}
 
 	args := strings.Fields(*update.Message.Text)
 	if len(args) < 2 {
