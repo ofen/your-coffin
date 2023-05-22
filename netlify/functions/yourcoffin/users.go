@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-
-	"github.com/nasermirzaei89/telegram"
 )
 
 type user struct {
@@ -19,7 +17,7 @@ func allowedUsers() []user {
 	return users
 }
 
-func isAllowed(update *telegram.Update) bool {
+func isAllowed(update *Update) bool {
 	users := allowedUsers()
 
 	for _, user := range users {

@@ -38,7 +38,7 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusNotFound}, nil
 	}
 
-	update := &telegram.Update{}
+	update := &Update{}
 	if err := json.Unmarshal([]byte(event.Body), update); err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusUnprocessableEntity,
@@ -47,7 +47,7 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 	}
 
 	var err error
-	switch *update.Message.Text {
+	switch update.command() {
 	case "/status":
 		err = statusHandler(ctx, update)
 	case "/help":
@@ -99,11 +99,11 @@ func sendMessageMarkdownV2(ctx context.Context, chatID int64, text string) error
 	return _sendMessage(ctx, opts...)
 }
 
-func statusHandler(ctx context.Context, update *telegram.Update) error {
+func statusHandler(ctx context.Context, update *Update) error {
 	return sendMessage(ctx, update.Message.From.ID, "ok")
 }
 
-func helpHandler(ctx context.Context, update *telegram.Update) error {
+func helpHandler(ctx context.Context, update *Update) error {
 	resp, err := bot.GetMyCommands(ctx)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func helpHandler(ctx context.Context, update *telegram.Update) error {
 	return sendMessage(ctx, update.Message.From.ID, text)
 }
 
-func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
+func lastmetersHandler(ctx context.Context, update *Update) error {
 	if !isAllowed(update) {
 		return nil
 	}
@@ -164,12 +164,12 @@ func lastmetersHandler(ctx context.Context, update *telegram.Update) error {
 	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
 }
 
-func metersHandler(ctx context.Context, update *telegram.Update) error {
+func metersHandler(ctx context.Context, update *Update) error {
 	if !isAllowed(update) {
 		return nil
 	}
 
-	args := strings.Fields(*update.Message.Text)
+	args := update.args()
 	if len(args) < 2 {
 		return fmt.Errorf("usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
 	}
@@ -263,4 +263,26 @@ func escapeText(parseMode string, text string) string {
 	}
 
 	return replacer.Replace(text)
+}
+
+type Update struct {
+	telegram.Update
+}
+
+func (u Update) command() string {
+	fields := strings.Fields(*u.Message.Text)
+	if len(fields) > 0 {
+		return fields[0]
+	}
+
+	return ""
+}
+
+func (u Update) args() []string {
+	fields := strings.Fields(*u.Message.Text)
+	if len(fields) > 0 {
+		return fields[1:]
+	}
+
+	return []string{}
 }
