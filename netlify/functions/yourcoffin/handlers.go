@@ -46,6 +46,10 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		}, nil
 	}
 
+	if !isAllowed(update) {
+		return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
+	}
+
 	var err error
 	switch update.command() {
 	case "/status":
@@ -56,6 +60,8 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		err = lastmetersHandler(ctx, update)
 	case "/meters":
 		err = metersHandler(ctx, update)
+	default:
+		err = sendMessage(ctx, update.Message.From.ID, "incorrect command")
 	}
 
 	if err != nil {
@@ -120,10 +126,6 @@ func helpHandler(ctx context.Context, update *Update) error {
 }
 
 func lastmetersHandler(ctx context.Context, update *Update) error {
-	if !isAllowed(update) {
-		return nil
-	}
-
 	v, err := gs.Rows()
 	if err != nil {
 		return err
@@ -165,10 +167,6 @@ func lastmetersHandler(ctx context.Context, update *Update) error {
 }
 
 func metersHandler(ctx context.Context, update *Update) error {
-	if !isAllowed(update) {
-		return nil
-	}
-
 	args := update.args()
 	if len(args) < 2 {
 		return fmt.Errorf("usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
