@@ -268,9 +268,9 @@ type Update struct {
 }
 
 func (u Update) command() string {
-	fields := strings.Fields(*u.Message.Text)
-	if len(fields) > 0 {
-		return fields[0]
+	args := u.args()
+	if len(args) > 0 {
+		return args[0]
 	}
 
 	return ""
