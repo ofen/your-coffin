@@ -38,34 +38,34 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusNotFound}, nil
 	}
 
-	update := &Update{}
-	if err := json.Unmarshal([]byte(event.Body), update); err != nil {
+	u := &update{}
+	if err := json.Unmarshal([]byte(event.Body), u); err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: http.StatusUnprocessableEntity,
 			Body:       err.Error(),
 		}, nil
 	}
 
-	if !isAllowed(update) {
+	if !isAllowed(u) {
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 	}
 
 	var err error
-	switch update.command() {
+	switch u.command() {
 	case "/status":
-		err = statusHandler(ctx, update)
+		err = statusHandler(ctx, u)
 	case "/help":
-		err = helpHandler(ctx, update)
+		err = helpHandler(ctx, u)
 	case "/lastmeters":
-		err = lastmetersHandler(ctx, update)
+		err = lastmetersHandler(ctx, u)
 	case "/meters":
-		err = metersHandler(ctx, update)
+		err = metersHandler(ctx, u)
 	default:
-		err = sendMessage(ctx, update.Message.From.ID, "incorrect command")
+		err = sendMessage(ctx, u.Message.From.ID, "incorrect command")
 	}
 
 	if err != nil {
-		if err = sendMessage(ctx, update.Message.From.ID, err.Error()); err != nil {
+		if err = sendMessage(ctx, u.Message.From.ID, err.Error()); err != nil {
 			log.Println(err)
 		}
 	}
@@ -105,11 +105,11 @@ func sendMessageMarkdownV2(ctx context.Context, chatID int64, text string) error
 	return _sendMessage(ctx, opts...)
 }
 
-func statusHandler(ctx context.Context, update *Update) error {
-	return sendMessage(ctx, update.Message.From.ID, "ok")
+func statusHandler(ctx context.Context, u *update) error {
+	return sendMessage(ctx, u.Message.From.ID, "ok")
 }
 
-func helpHandler(ctx context.Context, update *Update) error {
+func helpHandler(ctx context.Context, u *update) error {
 	resp, err := bot.GetMyCommands(ctx)
 	if err != nil {
 		return err
@@ -122,16 +122,16 @@ func helpHandler(ctx context.Context, update *Update) error {
 
 	text = strings.TrimRight(text, "\n")
 
-	return sendMessage(ctx, update.Message.From.ID, text)
+	return sendMessage(ctx, u.Message.From.ID, text)
 }
 
-func lastmetersHandler(ctx context.Context, update *Update) error {
-	v, err := gs.Rows()
+func lastmetersHandler(ctx context.Context, u *update) error {
+	l, err := listMeters()
 	if err != nil {
 		return err
 	}
 
-	m1 := RowToMeters(v.Values[len(v.Values)-1])
+	m1 := l[len(l)-1]
 	text := fmt.Sprintf("*here is the last meters*\n"+
 		"date: %v\n"+
 		"hot water: %v\n"+
@@ -145,9 +145,9 @@ func lastmetersHandler(ctx context.Context, update *Update) error {
 		m1.ElectricityT2,
 	)
 
-	if len(v.Values) > 1 {
-		m2 := RowToMeters(v.Values[len(v.Values)-2])
-		subm := m1.Sub(m2)
+	if len(l) > 2 {
+		m2 := l[len(l)-2]
+		subm := m1.sub(m2)
 
 		text = fmt.Sprintf("*here is the last meters*\n"+
 			"date: %s\n"+
@@ -163,11 +163,11 @@ func lastmetersHandler(ctx context.Context, update *Update) error {
 		)
 	}
 
-	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
+	return sendMessageMarkdownV2(ctx, u.Message.From.ID, text)
 }
 
-func metersHandler(ctx context.Context, update *Update) error {
-	args := update.args()
+func metersHandler(ctx context.Context, u *update) error {
+	args := u.args()
 	if len(args) < 2 {
 		return fmt.Errorf("usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
 	}
@@ -183,40 +183,38 @@ func metersHandler(ctx context.Context, update *Update) error {
 		}
 	}
 
-	lastRows, err := gs.LastRow()
+	prevm, err := lastMeters()
 	if err != nil {
 		return err
 	}
 
-	previousMeters := RowToMeters(lastRows)
-	newMeters := RowToMeters([]interface{}{
-		time.Unix(int64(update.Message.Date), 0).Format(metersDateFmt),
+	newm := rowToMeters([]interface{}{
+		time.Unix(int64(u.Message.Date), 0).Format(metersDateFmt),
 		values[0],
 		values[1],
 		values[2],
 		values[3],
 	})
 
-	err = gs.AppendRow(newMeters.ToRow())
-	if err != nil {
+	if err = appendMeters(newm); err != nil {
 		return err
 	}
 
-	subm := newMeters.Sub(previousMeters)
+	subm := newm.sub(prevm)
 	text := fmt.Sprintf("*meters updated*\n"+
 		"date: %s\n"+
 		"hot water: %d (%+d)\n"+
 		"cold water: %d (%+d)\n"+
 		"electricity (t1): %d (%+d)\n"+
 		"electricity (t2): %d (%+d)",
-		newMeters.Date,
-		newMeters.HotWater, subm.HotWater,
-		newMeters.ColdWater, subm.ColdWater,
-		newMeters.ElectricityT1, subm.ElectricityT1,
-		newMeters.ElectricityT2, subm.ElectricityT2,
+		newm.Date,
+		newm.HotWater, subm.HotWater,
+		newm.ColdWater, subm.ColdWater,
+		newm.ElectricityT1, subm.ElectricityT1,
+		newm.ElectricityT2, subm.ElectricityT2,
 	)
 
-	return sendMessageMarkdownV2(ctx, update.Message.From.ID, text)
+	return sendMessageMarkdownV2(ctx, u.Message.From.ID, text)
 }
 
 func escapeText(parseMode string, text string) string {
@@ -263,11 +261,11 @@ func escapeText(parseMode string, text string) string {
 	return replacer.Replace(text)
 }
 
-type Update struct {
+type update struct {
 	telegram.Update
 }
 
-func (u Update) command() string {
+func (u update) command() string {
 	args := u.args()
 	if len(args) > 0 {
 		return args[0]
@@ -276,6 +274,6 @@ func (u Update) command() string {
 	return ""
 }
 
-func (u Update) args() []string {
+func (u update) args() []string {
 	return strings.Fields(*u.Message.Text)
 }

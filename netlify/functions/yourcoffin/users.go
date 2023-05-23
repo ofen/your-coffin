@@ -17,11 +17,11 @@ func allowedUsers() []user {
 	return users
 }
 
-func isAllowed(update *Update) bool {
+func isAllowed(u *update) bool {
 	users := allowedUsers()
 
 	for _, user := range users {
-		if user.ID == int(update.Message.From.ID) {
+		if user.ID == int(u.Message.From.ID) {
 			return true
 		}
 	}
