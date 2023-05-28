@@ -14,7 +14,7 @@ var (
 	bot         = telegram.New(os.Getenv("BOT_TOKEN"))
 	gs          = googlesheets.New(os.Getenv("GOOGLE_SPREADSHEET"))
 	secretToken = os.Getenv("SECRET_TOKEN")
-	s           = storage.New(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), time.Minute*5)
+	s           = storage.New(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), time.Minute*2)
 )
 
 func main() {
