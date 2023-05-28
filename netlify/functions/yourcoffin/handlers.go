@@ -191,7 +191,13 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 func metersHandler(ctx context.Context, u *update) error {
 	session, _ := ctx.Value("session").(Session)
 	if session.Data == nil {
-		session.Data = json.RawMessage("{}")
+		data, err := json.Marshal(&meters{})
+		if err != nil {
+			return err
+		}
+
+		session.Data = data
+
 		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to cancel"); err != nil {
 			return err
 		}
