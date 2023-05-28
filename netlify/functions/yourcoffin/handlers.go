@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -26,11 +27,17 @@ const (
 
 type Session struct {
 	Hanlder string
-	Data    any
+	Data    interface{}
 }
 
 // handler is main entrypoint for request.
 func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("recovered: %s\n%s", r, debug.Stack())
+		}
+	}()
+
 	log.Println(event)
 
 	lc, ok := lambdacontext.FromContext(ctx)
@@ -182,12 +189,6 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 }
 
 func metersHandler(ctx context.Context, u *update) error {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Recovered: %v", r)
-		}
-	}()
-
 	session, _ := ctx.Value("session").(Session)
 	if session.Data == nil {
 		session.Data = &meters{}
