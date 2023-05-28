@@ -182,6 +182,12 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 }
 
 func metersHandler(ctx context.Context, u *update) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered: %v", r)
+		}
+	}()
+
 	session, _ := ctx.Value("session").(Session)
 	if session.Data == nil {
 		session.Data = &meters{}
