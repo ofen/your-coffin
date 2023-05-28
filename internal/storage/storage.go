@@ -10,12 +10,12 @@ import (
 
 func New(addr, password string, ttl time.Duration) *Storage {
 	return &Storage{
-		Client: redis.NewClient(&redis.Options{
+		redis.NewClient(&redis.Options{
 			Addr:     addr,
 			Password: password,
 			DB:       0, // use default DB
 		}),
-		ttl: ttl,
+		ttl,
 	}
 
 }

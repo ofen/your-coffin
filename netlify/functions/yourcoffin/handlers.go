@@ -24,7 +24,7 @@ const (
 	parseModeMarkdownV2 = "MarkdownV2"
 )
 
-type session struct {
+type Session struct {
 	handler string
 	data    any
 }
@@ -54,7 +54,7 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 	}
 
-	var session session
+	var session Session
 	if err := s.Get(ctx, strconv.FormatInt(u.Message.From.ID, 10), &session); err != nil {
 		log.Println(err)
 	}
@@ -182,7 +182,7 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 }
 
 func metersHandler(ctx context.Context, u *update) error {
-	session, _ := ctx.Value("session").(session)
+	session, _ := ctx.Value("session").(Session)
 	if session.data == nil {
 		session.data = &meters{}
 		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to cancel"); err != nil {
