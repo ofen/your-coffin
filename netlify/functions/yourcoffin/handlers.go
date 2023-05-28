@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambdacontext"
@@ -24,6 +23,11 @@ const (
 	parseModeMarkdown   = "Markdown"
 	parseModeMarkdownV2 = "MarkdownV2"
 )
+
+type session struct {
+	handler string
+	data    any
+}
 
 // handler is main entrypoint for request.
 func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
@@ -50,8 +54,19 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		return &events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 	}
 
+	var session session
+	if err := s.Get(ctx, strconv.FormatInt(u.Message.From.ID, 10), &session); err != nil {
+		log.Println(err)
+	}
+
+	if session.handler == "" {
+		session.handler = u.command()
+	}
+
+	ctx = context.WithValue(ctx, "session", session)
+
 	var err error
-	switch u.command() {
+	switch session.handler {
 	case "/status":
 		err = statusHandler(ctx, u)
 	case "/help":
@@ -167,54 +182,125 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 }
 
 func metersHandler(ctx context.Context, u *update) error {
-	args := u.args()
-	if len(args) < 2 {
-		return fmt.Errorf("usage: /meters <hot_water>,<cold_water>,<electricity_t1>,<electricity_t2>")
-	}
-
-	values := strings.Split(args[1], ",")
-	if len(values) != 4 {
-		return fmt.Errorf("invalid argument")
-	}
-
-	for _, v := range values {
-		if _, err := strconv.Atoi(v); err != nil {
+	session, _ := ctx.Value("session").(session)
+	if session.data == nil {
+		session.data = &meters{}
+		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to cancel"); err != nil {
 			return err
 		}
+
+		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
 	}
 
-	prevm, err := lastMeters()
-	if err != nil {
+	args := u.args()
+	if len(args) < 2 {
+		return fmt.Errorf("argument required")
+	}
+
+	if args[1] == "cancel" {
+		if err := sendMessage(ctx, u.Message.From.ID, "aborted"); err != nil {
+			return err
+		}
+
+		return s.Del(ctx, strconv.FormatInt(u.Message.From.ID, 10))
+	}
+
+	m := session.data.(*meters)
+
+	if m.HotWater == 0 {
+		v, err := strconv.Atoi(args[1])
+		if err != nil {
+			return fmt.Errorf("invalid argument: %s", args[1])
+		}
+
+		m.HotWater = v
+		session.data = m
+
+		if err := sendMessage(ctx, u.Message.From.ID, "enter cold water"); err != nil {
+			return err
+		}
+
+		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
+	}
+
+	if m.ColdWater == 0 {
+		v, err := strconv.Atoi(args[1])
+		if err != nil {
+			return fmt.Errorf("invalid argument: %s", args[1])
+		}
+
+		m.ColdWater = v
+		session.data = m
+
+		if err := sendMessage(ctx, u.Message.From.ID, "enter electricity (t1)"); err != nil {
+			return err
+		}
+
+		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
+	}
+
+	if m.ElectricityT1 == 0 {
+		v, err := strconv.Atoi(args[1])
+		if err != nil {
+			return fmt.Errorf("invalid argument: %s", args[1])
+		}
+
+		m.ElectricityT1 = v
+		session.data = m
+
+		if err := sendMessage(ctx, u.Message.From.ID, "enter electricity (t2)"); err != nil {
+			return err
+		}
+
+		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
+	}
+
+	if m.ElectricityT2 == 0 {
+		v, err := strconv.Atoi(args[1])
+		if err != nil {
+			return fmt.Errorf("invalid argument: %s", args[1])
+		}
+
+		m.ElectricityT2 = v
+		session.data = m
+
+		prevm, err := lastMeters()
+		if err != nil {
+			return err
+		}
+
+		subm := m.sub(prevm)
+
+		if err = sendMessageMarkdownV2(ctx, u.Message.From.ID, fmt.Sprintf("is this correct?\n"+
+			"hot water: %d (%+d)\n"+
+			"cold water: %d (%+d)\n"+
+			"electricity (t1): %d (%+d)\n"+
+			"electricity (t2): %d (%+d)",
+			m.HotWater, subm.HotWater,
+			m.ColdWater, subm.ColdWater,
+			m.ElectricityT1, subm.ElectricityT1,
+			m.ElectricityT2, subm.ElectricityT2,
+		)); err != nil {
+			return err
+		}
+
+		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
+	}
+
+	if args[1] != "ok" {
+		return fmt.Errorf("only \"ok\" or \"cancel\" allowed")
+	}
+
+	if err := appendMeters(m); err != nil {
 		return err
 	}
 
-	newm := rowToMeters([]interface{}{
-		time.Unix(int64(u.Message.Date), 0).Format(metersDateFmt),
-		values[0],
-		values[1],
-		values[2],
-		values[3],
-	})
-
-	if err = appendMeters(newm); err != nil {
+	if err := s.Del(ctx, strconv.FormatInt(u.Message.From.ID, 10)); err != nil {
 		return err
 	}
 
-	subm := newm.sub(prevm)
-	text := fmt.Sprintf("*meters updated*\n"+
-		"date: %s\n"+
-		"hot water: %d (%+d)\n"+
-		"cold water: %d (%+d)\n"+
-		"electricity (t1): %d (%+d)\n"+
-		"electricity (t2): %d (%+d)",
-		newm.Date,
-		newm.HotWater, subm.HotWater,
-		newm.ColdWater, subm.ColdWater,
-		newm.ElectricityT1, subm.ElectricityT1,
-		newm.ElectricityT2, subm.ElectricityT2,
-	)
+	return sendMessage(ctx, u.Message.From.ID, "meters updated")
 
-	return sendMessageMarkdownV2(ctx, u.Message.From.ID, text)
 }
 
 func escapeText(parseMode string, text string) string {
