@@ -27,7 +27,7 @@ const (
 
 type Session struct {
 	Hanlder string
-	Data    interface{}
+	Data    json.RawMessage
 }
 
 // handler is main entrypoint for request.
@@ -191,7 +191,7 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 func metersHandler(ctx context.Context, u *update) error {
 	session, _ := ctx.Value("session").(Session)
 	if session.Data == nil {
-		session.Data = &meters{}
+		session.Data = json.RawMessage("{}")
 		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to cancel"); err != nil {
 			return err
 		}
@@ -207,7 +207,10 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Del(ctx, strconv.FormatInt(u.Message.From.ID, 10))
 	}
 
-	m := session.Data.(*meters)
+	var m *meters
+	if err := json.Unmarshal(session.Data, m); err != nil {
+		return err
+	}
 
 	if m.HotWater == 0 {
 		v, err := strconv.Atoi(*u.Message.Text)
@@ -216,7 +219,13 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.HotWater = v
-		session.Data = m
+
+		data, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		session.Data = data
 
 		if err := sendMessage(ctx, u.Message.From.ID, "enter cold water"); err != nil {
 			return err
@@ -232,7 +241,13 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.ColdWater = v
-		session.Data = m
+
+		data, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		session.Data = data
 
 		if err := sendMessage(ctx, u.Message.From.ID, "enter electricity (t1)"); err != nil {
 			return err
@@ -248,7 +263,13 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.ElectricityT1 = v
-		session.Data = m
+
+		data, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		session.Data = data
 
 		if err := sendMessage(ctx, u.Message.From.ID, "enter electricity (t2)"); err != nil {
 			return err
@@ -264,7 +285,13 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.ElectricityT2 = v
-		session.Data = m
+
+		data, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+
+		session.Data = data
 
 		prevm, err := lastMeters()
 		if err != nil {
