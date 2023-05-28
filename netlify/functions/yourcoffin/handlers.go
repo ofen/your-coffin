@@ -213,7 +213,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Del(ctx, strconv.FormatInt(u.Message.From.ID, 10))
 	}
 
-	var m *meters
+	m := &meters{}
 	if err := json.Unmarshal(session.Data, m); err != nil {
 		return err
 	}
