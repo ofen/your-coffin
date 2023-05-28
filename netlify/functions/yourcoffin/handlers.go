@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambdacontext"
@@ -325,6 +326,8 @@ func metersHandler(ctx context.Context, u *update) error {
 	if *u.Message.Text != "ok" {
 		return fmt.Errorf("only \"ok\" or \"cancel\" allowed")
 	}
+
+	m.Date = time.Now().Format(metersDateFmt)
 
 	if err := appendMeters(m); err != nil {
 		return err

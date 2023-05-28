@@ -17,6 +17,10 @@ var (
 	s           = storage.New(os.Getenv("REDIS_ADDR"), os.Getenv("REDIS_PASSWORD"), time.Minute*2)
 )
 
+func init() {
+	time.Local = time.UTC
+}
+
 func main() {
 	lambda.Start(handler)
 }
