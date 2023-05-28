@@ -199,7 +199,7 @@ func metersHandler(ctx context.Context, u *update) error {
 
 		session.Data = data
 
-		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to cancel"); err != nil {
+		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to abort"); err != nil {
 			return err
 		}
 
@@ -307,11 +307,12 @@ func metersHandler(ctx context.Context, u *update) error {
 
 		subm := m.sub(prevm)
 
-		if err = sendMessageMarkdownV2(ctx, u.Message.From.ID, fmt.Sprintf("is this correct?\n"+
+		if err = sendMessage(ctx, u.Message.From.ID, fmt.Sprintf("is this correct?\n\n"+
 			"hot water: %d (%+d)\n"+
 			"cold water: %d (%+d)\n"+
 			"electricity (t1): %d (%+d)\n"+
-			"electricity (t2): %d (%+d)",
+			"electricity (t2): %d (%+d)\n\n"+
+			"enter \"ok\" to proceed or \"cancel\" to abort",
 			m.HotWater, subm.HotWater,
 			m.ColdWater, subm.ColdWater,
 			m.ElectricityT1, subm.ElectricityT1,
