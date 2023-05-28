@@ -327,7 +327,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		return fmt.Errorf("only \"ok\" or \"cancel\" allowed")
 	}
 
-	m.Date = time.Now().Format(metersDateFmt)
+	m.Date = u.Time().Format(metersDateFmt)
 
 	if err := appendMeters(m); err != nil {
 		return err
@@ -400,4 +400,8 @@ func (u update) command() string {
 
 func (u update) args() []string {
 	return strings.Fields(*u.Message.Text)
+}
+
+func (u update) Time() time.Time {
+	return time.Unix(int64(u.Message.Date), 0)
 }
