@@ -192,12 +192,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
 	}
 
-	args := u.args()
-	if len(args) < 2 {
-		return fmt.Errorf("argument required")
-	}
-
-	if args[1] == "cancel" {
+	if *u.Message.Text == "cancel" {
 		if err := sendMessage(ctx, u.Message.From.ID, "aborted"); err != nil {
 			return err
 		}
@@ -208,9 +203,9 @@ func metersHandler(ctx context.Context, u *update) error {
 	m := session.data.(*meters)
 
 	if m.HotWater == 0 {
-		v, err := strconv.Atoi(args[1])
+		v, err := strconv.Atoi(*u.Message.Text)
 		if err != nil {
-			return fmt.Errorf("invalid argument: %s", args[1])
+			return fmt.Errorf("invalid argument: %q", *u.Message.Text)
 		}
 
 		m.HotWater = v
@@ -224,9 +219,9 @@ func metersHandler(ctx context.Context, u *update) error {
 	}
 
 	if m.ColdWater == 0 {
-		v, err := strconv.Atoi(args[1])
+		v, err := strconv.Atoi(*u.Message.Text)
 		if err != nil {
-			return fmt.Errorf("invalid argument: %s", args[1])
+			return fmt.Errorf("invalid argument: %q", *u.Message.Text)
 		}
 
 		m.ColdWater = v
@@ -240,9 +235,9 @@ func metersHandler(ctx context.Context, u *update) error {
 	}
 
 	if m.ElectricityT1 == 0 {
-		v, err := strconv.Atoi(args[1])
+		v, err := strconv.Atoi(*u.Message.Text)
 		if err != nil {
-			return fmt.Errorf("invalid argument: %s", args[1])
+			return fmt.Errorf("invalid argument: %q", *u.Message.Text)
 		}
 
 		m.ElectricityT1 = v
@@ -256,9 +251,9 @@ func metersHandler(ctx context.Context, u *update) error {
 	}
 
 	if m.ElectricityT2 == 0 {
-		v, err := strconv.Atoi(args[1])
+		v, err := strconv.Atoi(*u.Message.Text)
 		if err != nil {
-			return fmt.Errorf("invalid argument: %s", args[1])
+			return fmt.Errorf("invalid argument: %q", *u.Message.Text)
 		}
 
 		m.ElectricityT2 = v
@@ -287,7 +282,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
 	}
 
-	if args[1] != "ok" {
+	if *u.Message.Text != "ok" {
 		return fmt.Errorf("only \"ok\" or \"cancel\" allowed")
 	}
 
