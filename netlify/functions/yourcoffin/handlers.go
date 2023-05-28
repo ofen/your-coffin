@@ -25,8 +25,8 @@ const (
 )
 
 type Session struct {
-	handler string
-	data    any
+	Hanlder string
+	Data    any
 }
 
 // handler is main entrypoint for request.
@@ -59,14 +59,14 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		log.Println(err)
 	}
 
-	if session.handler == "" {
-		session.handler = u.command()
+	if session.Hanlder == "" {
+		session.Hanlder = u.command()
 	}
 
 	ctx = context.WithValue(ctx, "session", session)
 
 	var err error
-	switch session.handler {
+	switch session.Hanlder {
 	case "/status":
 		err = statusHandler(ctx, u)
 	case "/help":
@@ -183,8 +183,8 @@ func lastmetersHandler(ctx context.Context, u *update) error {
 
 func metersHandler(ctx context.Context, u *update) error {
 	session, _ := ctx.Value("session").(Session)
-	if session.data == nil {
-		session.data = &meters{}
+	if session.Data == nil {
+		session.Data = &meters{}
 		if err := sendMessage(ctx, u.Message.From.ID, "enter hot water or \"cancel\" to cancel"); err != nil {
 			return err
 		}
@@ -200,7 +200,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Del(ctx, strconv.FormatInt(u.Message.From.ID, 10))
 	}
 
-	m := session.data.(*meters)
+	m := session.Data.(*meters)
 
 	if m.HotWater == 0 {
 		v, err := strconv.Atoi(*u.Message.Text)
@@ -209,7 +209,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.HotWater = v
-		session.data = m
+		session.Data = m
 
 		if err := sendMessage(ctx, u.Message.From.ID, "enter cold water"); err != nil {
 			return err
@@ -225,7 +225,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.ColdWater = v
-		session.data = m
+		session.Data = m
 
 		if err := sendMessage(ctx, u.Message.From.ID, "enter electricity (t1)"); err != nil {
 			return err
@@ -241,7 +241,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.ElectricityT1 = v
-		session.data = m
+		session.Data = m
 
 		if err := sendMessage(ctx, u.Message.From.ID, "enter electricity (t2)"); err != nil {
 			return err
@@ -257,7 +257,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		}
 
 		m.ElectricityT2 = v
-		session.data = m
+		session.Data = m
 
 		prevm, err := lastMeters()
 		if err != nil {
