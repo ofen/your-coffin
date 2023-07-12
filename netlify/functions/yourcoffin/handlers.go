@@ -27,7 +27,7 @@ const (
 )
 
 type Session struct {
-	Hanlder string
+	Handler string
 	Data    json.RawMessage
 }
 
@@ -67,14 +67,14 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (*events.
 		log.Println(err)
 	}
 
-	if session.Hanlder == "" {
-		session.Hanlder = u.command()
+	if session.Handler == "" {
+		session.Handler = u.command()
 	}
 
 	ctx = context.WithValue(ctx, "session", session)
 
 	var err error
-	switch session.Hanlder {
+	switch session.Handler {
 	case "/status":
 		err = statusHandler(ctx, u)
 	case "/help":
@@ -206,7 +206,7 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
 	}
 
-	if *u.Message.Text == "cancel" {
+	if strings.ToLower(*u.Message.Text) == "cancel" {
 		if err := sendMessage(ctx, u.Message.From.ID, "aborted"); err != nil {
 			return err
 		}
@@ -312,7 +312,7 @@ func metersHandler(ctx context.Context, u *update) error {
 			"cold water: %d (%+d)\n"+
 			"electricity (t1): %d (%+d)\n"+
 			"electricity (t2): %d (%+d)\n\n"+
-			"enter \"ok\" to proceed or \"cancel\" to abort",
+			"enter \"approve\" to proceed or \"cancel\" to abort",
 			m.HotWater, subm.HotWater,
 			m.ColdWater, subm.ColdWater,
 			m.ElectricityT1, subm.ElectricityT1,
@@ -324,8 +324,8 @@ func metersHandler(ctx context.Context, u *update) error {
 		return s.Set(ctx, strconv.FormatInt(u.Message.From.ID, 10), session)
 	}
 
-	if *u.Message.Text != "ok" {
-		return fmt.Errorf("only \"ok\" or \"cancel\" allowed")
+	if strings.ToLower(*u.Message.Text) != "approve" {
+		return fmt.Errorf("only \"approve\" or \"cancel\" allowed")
 	}
 
 	m.Date = u.Time().Format(metersDateFmt)
@@ -386,9 +386,7 @@ func escapeText(parseMode string, text string) string {
 	return replacer.Replace(text)
 }
 
-type update struct {
-	telegram.Update
-}
+type update telegram.Update
 
 func (u update) command() string {
 	args := u.args()
